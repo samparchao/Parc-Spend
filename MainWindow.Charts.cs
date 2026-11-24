@@ -277,13 +277,14 @@ public sealed partial class MainWindow
         var groups = new[]
         {
             (Label: "Monzo cash", Color: "#9CE6C1", Amount: balances.Where(balance => balance.IsMonzo && !balance.IsDebt).Sum(balance => balance.Amount)),
-            (Label: "Other assets", Color: "#8AAEEC", Amount: balances.Where(balance => !balance.IsMonzo && !balance.IsDebt).Sum(balance => balance.Amount)),
+            (Label: "Monzo Pots", Color: "#F1CC86", Amount: balances.Where(balance => balance.Kind == "Pot").Sum(balance => balance.Amount)),
+            (Label: "Other assets", Color: "#8AAEEC", Amount: balances.Where(balance => !balance.IsMonzo && !balance.IsDebt && balance.Kind != "Pot").Sum(balance => balance.Amount)),
             (Label: "Debts", Color: "#F3A3A0", Amount: balances.Where(balance => balance.IsDebt).Sum(balance => balance.Amount)),
         };
 
         decimal total = groups.Sum(group => Math.Abs(group.Amount));
         double start = -Math.PI / 2;
-        foreach (var group in groups)
+        foreach (var group in groups.Where(group => group.Label != "Monzo Pots" || balances.Any(balance => balance.Kind == "Pot")))
         {
             bool available = balances.Count > 0 && (group.Label != "Monzo cash" || balances.Any(balance => balance.IsMonzo));
             CompositionRows.Children.Add(BalanceLegendRow(group.Label, available ? Money(group.Amount) : "—", group.Color));

@@ -27,7 +27,6 @@ public sealed partial class MainWindow
     private readonly SemaphoreSlim _preferencesLock = new(1, 1);
     private FinancePreferences _preferences = new();
     private bool _preferencesLoaded;
-    private string? _connectedAccountId;
 
     private async Task LoadPreferencesAsync()
     {
@@ -87,8 +86,8 @@ public sealed partial class MainWindow
         GoalsEmptyText.Visibility = _preferences.Goals.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         foreach (SavingsGoal goal in _preferences.Goals)
         {
-            ManualFinanceEntry? account = _holdings.FirstOrDefault(entry => entry.Id == goal.AccountId && !IsDebt(entry));
-            decimal saved = account is null ? 0 : Math.Max(0, ToMonthlyBalance(account).Amount);
+            MonthlyBalance? account = GoalSources().FirstOrDefault(entry => entry.AccountId == goal.AccountId);
+            decimal saved = Math.Max(0, account?.Amount ?? 0);
             var row = new StackPanel { Spacing = 5 };
             var title = new Button { Content = goal.Name };
             title.Click += async (_, _) => await EditGoalAsync(goal);
@@ -109,14 +108,18 @@ public sealed partial class MainWindow
         }
     }
 
+    private IEnumerable<MonthlyBalance> GoalSources() =>
+        _holdings.Where(entry => !IsDebt(entry)).Select(ToMonthlyBalance)
+            .Concat(LinkedMonthlyBalances().Where(balance => balance.Kind == "Pot"));
+
     private async Task EditGoalAsync(SavingsGoal? goal)
     {
         await RunFinanceActionAsync(async () =>
         {
-            ManualFinanceEntry[] accounts = _holdings.Where(entry => !IsDebt(entry)).OrderBy(entry => entry.Name).ToArray();
+            MonthlyBalance[] accounts = GoalSources().OrderBy(entry => entry.Name).ToArray();
             if (accounts.Length == 0 && goal is null)
             {
-                SetStatus("Add a tracked asset before creating a savings goal.", InfoBarSeverity.Warning);
+                SetStatus("Add a tracked asset or sync a Monzo Pot before creating a savings goal.", InfoBarSeverity.Warning);
                 return;
             }
 
@@ -126,7 +129,7 @@ public sealed partial class MainWindow
             {
                 Header = "Funding account",
                 ItemsSource = accounts.Select(entry => entry.Name).ToArray(),
-                SelectedIndex = goal is null ? 0 : Array.FindIndex(accounts, entry => entry.Id == goal.AccountId),
+                SelectedIndex = goal is null ? 0 : Array.FindIndex(accounts, entry => entry.AccountId == goal.AccountId),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
             var validation = new TextBlock { TextWrapping = TextWrapping.Wrap };
@@ -155,7 +158,7 @@ public sealed partial class MainWindow
             ContentDialogResult result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                var updated = new SavingsGoal(goal?.Id ?? Guid.NewGuid().ToString("N"), name.Text.Trim(), targetAmount, accounts[account.SelectedIndex].Id);
+                var updated = new SavingsGoal(goal?.Id ?? Guid.NewGuid().ToString("N"), name.Text.Trim(), targetAmount, accounts[account.SelectedIndex].AccountId!);
                 await UpdatePreferencesAsync(current => current with
                 {
                     Goals = current.Goals.Where(item => item.Id != updated.Id).Append(updated).ToArray(),
@@ -247,7 +250,7 @@ public sealed partial class MainWindow
             await LoadBudgetsAsync();
             await LoadManualFinanceAsync();
             await LoadMonthlyHistoryAsync();
-            RefreshTransactionViews();
+            await LoadLedgerAsync();
             SetStatus("Finance backup restored.", InfoBarSeverity.Success);
         }, "Could not restore the finance backup.");
     }
@@ -295,20 +298,26 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (await _authService.LogoutAsync())
+            if (!await _monzoSyncLock.WaitAsync(0))
             {
-                _hasMonzoBalance = false;
-                _connectedAccountId = null;
-                _currentBalance = 0;
-                _monzoTransactions.Clear();
-                ConnectedAccount.Visibility = Visibility.Collapsed;
-                ConnectionLabel.Text = "Manual tracking";
-                ConnectionDot.Fill = Brush("#899490");
-                TotalCashTextBlock.Text = "—";
-                ActivityEmptyText.Text = "Connect Monzo in Settings to see your transactions.";
-                RefreshTransactionViews();
-                RefreshNetWorthOverview();
-                SetStatus("Monzo disconnected on this device.", InfoBarSeverity.Success);
+                SetStatus("Wait for the current sync to finish before disconnecting.", InfoBarSeverity.Informational);
+                return;
+            }
+
+            bool disconnected;
+            try
+            {
+                disconnected = await _authService.LogoutAsync();
+            }
+            finally
+            {
+                _monzoSyncLock.Release();
+            }
+
+            if (disconnected)
+            {
+                ApplyLedger();
+                SetStatus("Monzo disconnected. Saved balances and history remain available.", InfoBarSeverity.Success);
             }
             else
             {
@@ -319,11 +328,17 @@ public sealed partial class MainWindow
 
     private TransactionRule? RuleFor(Transaction transaction)
     {
+        if (AnnotationFor(transaction.Id).TransferWith is not null)
+        {
+            return new TransactionRule(FinancePreferences.Transfer, null);
+        }
+
         string fallback = transaction.IsLoad ? FinancePreferences.Transfer : FinancePreferences.Normal;
         return _preferences.TransactionRules.GetValueOrDefault(transaction.Id) ?? new TransactionRule(fallback, null);
     }
 
-    private bool IsRefund(Transaction transaction) => transaction.Amount > 0 && RuleFor(transaction)?.Treatment == FinancePreferences.Refund;
+    private bool IsRefund(Transaction transaction) => transaction.Amount > 0 && (AnnotationFor(transaction.Id).OffsetOf is not null
+        || RuleFor(transaction)?.Treatment == FinancePreferences.Refund);
 
     private decimal SpendEffect(Transaction transaction) =>
         transaction.Amount < 0 || IsRefund(transaction) ? -transaction.Amount : 0;
@@ -334,13 +349,13 @@ public sealed partial class MainWindow
     {
         await RunFinanceActionAsync(async () =>
         {
-            if (_monzoTransactions.Count == 0)
+            if (_ledgerTransactions.Count == 0)
             {
-                SetStatus("Sync Monzo to review transactions.", InfoBarSeverity.Informational);
+                SetStatus("Sync Monzo or import a statement to review transactions.", InfoBarSeverity.Informational);
                 return;
             }
 
-            var rows = _monzoTransactions.Select(transaction => new TransactionReviewItem(transaction,
+            var rows = _ledgerTransactions.Select(transaction => new TransactionReviewItem(transaction,
                 $"{transaction.Created.ToLocalTime():dd MMM} · {transaction.Merchant ?? transaction.Description ?? "Transaction"} · {SignedMoney(transaction.Amount)} · {RuleFor(transaction)?.Treatment ?? FinancePreferences.Normal}")).ToArray();
             var list = new ListView { SelectionMode = ListViewSelectionMode.Multiple, ItemsSource = rows, DisplayMemberPath = nameof(TransactionReviewItem.Label), MaxHeight = 285 };
             var treatment = new ComboBox
@@ -363,7 +378,7 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog
             {
                 XamlRoot = RootGrid.XamlRoot,
-                Title = "Review Monzo transactions",
+                Title = "Review transactions",
                 Content = content,
                 PrimaryButtonText = "Apply to selected",
                 CloseButtonText = "Cancel",
@@ -410,7 +425,7 @@ public sealed partial class MainWindow
     {
         _rawTransactions.Clear();
         _activityTransactions.Clear();
-        foreach (Transaction transaction in _monzoTransactions)
+        foreach (Transaction transaction in _ledgerTransactions)
         {
             TransactionRule? rule = RuleFor(transaction);
             string? merchantCategory = transaction.Merchant is { } merchant
@@ -418,6 +433,9 @@ public sealed partial class MainWindow
             var display = new Transaction
             {
                 Id = transaction.Id,
+                AccountId = transaction.AccountId,
+                IsPending = transaction.IsPending,
+                IsDeclined = transaction.IsDeclined,
                 Created = transaction.Created,
                 Amount = transaction.Amount,
                 Currency = transaction.Currency,
@@ -427,7 +445,7 @@ public sealed partial class MainWindow
                 Category = rule?.Category ?? merchantCategory ?? transaction.Category,
             };
             _activityTransactions.Add(display);
-            if (rule?.Treatment != FinancePreferences.Transfer)
+            if (rule?.Treatment != FinancePreferences.Transfer && !display.IsPending && !display.IsDeclined)
             {
                 _rawTransactions.Add(display);
             }
@@ -436,16 +454,16 @@ public sealed partial class MainWindow
         RebuildCategoryFilterOptions();
         ApplyTransactionFilters();
         ApplyBudgetSpend();
-        if (_hasMonzoBalance)
+        if (_activityTransactions.Count != 0)
         {
             ApplyAnalytics();
-            UpdateCashFlowForecast();
             RefreshSubscriptionInsights();
         }
         else
         {
             ClearMonzoViews();
         }
+        UpdateCashFlowForecast();
     }
 
     private void ClearMonzoViews()

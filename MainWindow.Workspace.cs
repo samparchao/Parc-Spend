@@ -125,6 +125,7 @@ public sealed partial class MainWindow
         HoldingsEmpty.Visibility = _holdings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         RefreshNetWorthOverview();
         ShowGoals();
+        UpdateCashFlowForecast();
     }
 
     private static string HoldingDetail(ManualFinanceEntry entry)
@@ -373,16 +374,8 @@ public sealed partial class MainWindow
         UpdateChartRange(animate: true);
     }
 
-    private IReadOnlyList<MonthlyBalance> CurrentBalances()
-    {
-        var balances = _holdings.Select(ToMonthlyBalance).ToList();
-        if (_hasMonzoBalance)
-        {
-            balances.Insert(0, MonzoMonthlyBalance());
-        }
-
-        return balances;
-    }
+    private IReadOnlyList<MonthlyBalance> CurrentBalances() =>
+        LinkedMonthlyBalances().Concat(_holdings.Select(ToMonthlyBalance)).ToArray();
 
     private void RefreshNetWorthOverview()
     {

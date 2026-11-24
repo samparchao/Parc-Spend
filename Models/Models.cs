@@ -13,6 +13,15 @@ namespace MonzoManager.Models;
 /// </summary>
 public class Transaction
 {
+    /// <summary>Gets or sets the account that supplied this transaction.</summary>
+    public string AccountId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets whether the bank still considers this transaction pending.</summary>
+    public bool IsPending { get; set; }
+
+    /// <summary>Gets or sets whether the bank declined this transaction.</summary>
+    public bool IsDeclined { get; set; }
+
     /// <summary>
     /// Gets or sets the transaction identifier.
     /// </summary>
@@ -85,6 +94,12 @@ public class Account
 /// </summary>
 public class Budget
 {
+    /// <summary>Gets or sets the monthly cycle start day, or zero for a one-off budget.</summary>
+    public int CycleDay { get; set; }
+
+    /// <summary>Gets or sets whether unused funds carry forward from completed cycles.</summary>
+    public bool Rollover { get; set; }
+
     /// <summary>
     /// Gets or sets the budget identifier.
     /// </summary>
