@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="830 76 562 562">
+  <title>Parc Spend stacked ledger mark</title>
+  <defs>
+    <linearGradient id="forest" x1="8%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0" stop-color="#123F32"/>
+      <stop offset="0.58" stop-color="#082E24"/>
+      <stop offset="1" stop-color="#05231B"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#FFE2A5"/>
+      <stop offset="1" stop-color="#F0C277"/>
+    </linearGradient>
+    <linearGradient id="middle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#EBC979"/>
+      <stop offset="1" stop-color="#C7A453"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#C8AD65"/>
+      <stop offset="1" stop-color="#A48B49"/>
+    </linearGradient>
+  </defs>
+  <rect x="832" y="78" width="558" height="558" rx="119" fill="url(#forest)"/>
+  <path fill="url(#back)" d="M 930 517 C 928 481 936 451 955 430 C 971 413 993 406 1021 406 H 1164 C 1186 406 1206 395 1222 378 L 1251 344 Q 1259 335 1270 335 H 1323 Q 1335 335 1330 345 L 1232 457 C 1218 473 1201 479 1179 479 H 1035 C 993 479 960 491 941 521 Q 933 535 930 517 Z"/>
+  <path fill="url(#middle)" d="M 918 504 C 914 451 920 413 938 376 C 949 354 964 336 980 325 L 1008 352 L 1034 326 H 1148 C 1173 326 1190 317 1207 299 L 1240 263 Q 1248 254 1260 254 H 1306 Q 1317 254 1311 265 L 1213 376 C 1199 392 1183 399 1160 399 H 1026 C 973 399 936 422 923 506 Q 921 514 918 504 Z"/>
+  <path fill="url(#front)" d="M 909 483 V 380 C 909 309 949 259 1004 201 C 1019 185 1039 178 1064 178 H 1288 Q 1299 178 1294 186 L 1192 295 C 1180 308 1165 313 1146 313 H 1059 Q 1045 313 1036 306 L 1008 284 L 973 312 C 931 341 917 387 914 485 Q 913 493 909 483 Z"/>
+</svg>
