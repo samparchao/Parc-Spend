@@ -56,7 +56,9 @@ public sealed partial class MainWindow
                 Header = "Category splits · one category and amount per line",
                 PlaceholderText = "groceries, 42.50",
                 Text = string.Join(Environment.NewLine, old.Splits.Select(split => $"{split.Category}, {split.Amount.ToString("0.00", Uk)}")),
-                AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 72,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MinHeight = 72,
             };
             var expected = new TextBox
             {
@@ -66,7 +68,9 @@ public sealed partial class MainWindow
             };
             var person = new TextBox
             {
-                Header = "Reimbursement from", PlaceholderText = "Optional name", MaxLength = 80,
+                Header = "Reimbursement from",
+                PlaceholderText = "Optional name",
+                MaxLength = 80,
                 Text = old.ReimbursementFrom ?? "",
             };
             LinkedChoice[] credits = new[] { new LinkedChoice(null, "None") }.Concat(_activityTransactions
@@ -101,9 +105,11 @@ public sealed partial class MainWindow
             panel.Children.Add(error);
             var dialog = new ContentDialog
             {
-                XamlRoot = RootGrid.XamlRoot, Title = "Transaction details",
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "Transaction details",
                 Content = new ScrollViewer { Content = panel, MaxHeight = 410 },
-                PrimaryButtonText = "Save details", CloseButtonText = "Cancel",
+                PrimaryButtonText = "Save details",
+                CloseButtonText = "Cancel",
             };
             LedgerAnnotation? annotation = null;
             dialog.PrimaryButtonClick += (_, args) =>
@@ -200,8 +206,11 @@ public sealed partial class MainWindow
         int index = Array.FindIndex(choices, item => item.Id == selected);
         return new ComboBox
         {
-            Header = header, ItemsSource = choices, DisplayMemberPath = nameof(LinkedChoice.Label),
-            SelectedIndex = Math.Max(0, index), HorizontalAlignment = HorizontalAlignment.Stretch,
+            Header = header,
+            ItemsSource = choices,
+            DisplayMemberPath = nameof(LinkedChoice.Label),
+            SelectedIndex = Math.Max(0, index),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
     }
 
@@ -332,8 +341,12 @@ public sealed partial class MainWindow
             }
             var dialog = new ContentDialog
             {
-                XamlRoot = RootGrid.XamlRoot, Title = "Planned expense", Content = panel,
-                PrimaryButtonText = "Save expense", SecondaryButtonText = expense is null ? "" : "Remove", CloseButtonText = "Cancel",
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "Planned expense",
+                Content = panel,
+                PrimaryButtonText = "Save expense",
+                SecondaryButtonText = expense is null ? "" : "Remove",
+                CloseButtonText = "Cancel",
             };
             decimal value = 0;
             dialog.PrimaryButtonClick += (_, args) =>

@@ -46,13 +46,13 @@ public sealed partial class MainWindow
 
     private void ShowWorkspace(string tag, bool animate)
     {
-        var (page, title, subtitle) = tag switch
+        var (page, title) = tag switch
         {
-            "worth" => (NetWorthPage, "Net worth", "Track what you own, what you owe and how it changes each month."),
-            "activity" => (ActivityPage, "Activity", "Find transactions and see where your Monzo spending goes."),
-            "planning" => (PlanningPage, "Planning", "Manage budgets and review upcoming cash flow."),
-            "settings" => (SettingsPage, "Settings", "Manage your Monzo connection."),
-            _ => (OverviewPage, "Overview", "Your balances and net worth over time."),
+            "worth" => (NetWorthPage, "Net worth"),
+            "activity" => (ActivityPage, "Activity"),
+            "planning" => (PlanningPage, "Planning"),
+            "settings" => (SettingsPage, "Settings"),
+            _ => (OverviewPage, "Overview"),
         };
 
         foreach (StackPanel candidate in new[] { OverviewPage, NetWorthPage, ActivityPage, PlanningPage, SettingsPage })
@@ -61,7 +61,6 @@ public sealed partial class MainWindow
         }
 
         WorkspaceTitle.Text = title;
-        WorkspaceSubtitle.Text = subtitle;
         OverviewAction.Visibility = page == OverviewPage ? Visibility.Visible : Visibility.Collapsed;
         WorkspaceScroll.ChangeView(null, 0, null, disableAnimation: true);
         if (animate)
@@ -86,21 +85,28 @@ public sealed partial class MainWindow
     private void ApplyResponsiveLayout(double width)
     {
         bool compact = width < 850;
-        RootGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 146 : 208);
-        WorkspaceBody.Padding = compact ? new Thickness(16, 20, 16, 22) : new Thickness(30, 27, 30, 28);
+        RootGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 146 : 192);
+        WorkspaceBody.Padding = compact ? new Thickness(16, 20, 16, 24) : new Thickness(32, 24, 32, 32);
 
-        ArrangeSecondaryCard(OverviewLayout, CompositionCard, width < 1030, 1);
-        ArrangeSecondaryCard(ActivityLayout, ActivityInsights, width < 1280, 2);
+        ArrangeSecondaryCard(OverviewLayout, CompositionCard, width < 1080, 1);
+        ArrangeSecondaryCard(ActivityLayout, ActivityInsights, width < 1160, 2);
         ArrangeSecondaryCard(PlanningLayout, PlanningCommitments, width < 1030, 1);
 
         bool stackMetrics = width < 690;
         OverviewMetrics.ColumnDefinitions[1].Width = new GridLength(stackMetrics ? 0 : 1, GridUnitType.Star);
         OverviewMetrics.ColumnDefinitions[2].Width = new GridLength(stackMetrics ? 0 : 1, GridUnitType.Star);
-        OverviewMetrics.ColumnSpacing = stackMetrics ? 0 : 14;
+        var metricDivider = stackMetrics ? new Thickness(0, 1, 0, 0) : new Thickness(1, 0, 0, 0);
+        IncomeCard.BorderThickness = metricDivider;
+        SpendingCard.BorderThickness = metricDivider;
         Grid.SetColumn(IncomeCard, stackMetrics ? 0 : 1);
         Grid.SetColumn(SpendingCard, stackMetrics ? 0 : 2);
         Grid.SetRow(IncomeCard, stackMetrics ? 1 : 0);
         Grid.SetRow(SpendingCard, stackMetrics ? 2 : 0);
+    }
+
+    private void TransactionsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        EditSelectedTransaction.IsEnabled = TransactionsListView.SelectedItem is TransactionRowItem;
     }
 
     private static void ArrangeSecondaryCard(Grid layout, FrameworkElement card, bool stack, double proportion)
@@ -396,9 +402,16 @@ public sealed partial class MainWindow
         MonthlySnapshot? previous = showLive
             ? displayedHistory.LastOrDefault(snapshot => snapshot.Month < CurrentMonth())
             : displayedHistory.SkipLast(1).LastOrDefault();
-        NetWorthChange.Text = (netWorth, previous) switch
+        decimal? change = netWorth - previous?.NetWorth;
+        NetWorthChange.Foreground = Brush(change switch
         {
-            (decimal amount, MonthlySnapshot prior) => $"{SignedMoney(amount - prior.NetWorth)} since {prior.Month:MMM yyyy}",
+            > 0 => "#9CE6C1",
+            < 0 => "#F3A3A0",
+            _ => "#A6AFAD",
+        });
+        NetWorthChange.Text = (change, previous) switch
+        {
+            (decimal amount, MonthlySnapshot prior) => $"{SignedMoney(amount)} since {prior.Month:MMM yyyy}",
             (_, _) when showLive => "Current tracked balances",
             (_, _) when latest is not null => $"Recorded {latest.Month:MMMM yyyy}",
             _ => "Track balances to calculate your net worth.",
@@ -409,7 +422,7 @@ public sealed partial class MainWindow
             ? $"Monzo is included automatically. Last synced {_lastMonzoSync:dd MMM, HH:mm}."
             : tracking;
 
-        DrawComposition(showLive ? live : latest?.Balances ?? []);
+        UpdateBalanceBreakdown(showLive ? live : latest?.Balances ?? []);
     }
 
     private async Task<bool> ConfirmAsync(string title, string message, string action)
@@ -464,7 +477,8 @@ public sealed partial class MainWindow
         {
             From = 0,
             To = 1,
-            Duration = new Duration(TimeSpan.FromMilliseconds(250)),
+            Duration = new Duration(TimeSpan.FromMilliseconds(160)),
+            FillBehavior = FillBehavior.Stop,
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
         };
         Storyboard.SetTarget(fade, element);

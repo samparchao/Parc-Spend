@@ -7,14 +7,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using MonzoManager.Services;
 using Windows.Foundation;
+using Windows.System;
 
 namespace MonzoManager;
 
@@ -26,6 +28,8 @@ public sealed partial class MainWindow
     private TextBlock? _chartTooltipText;
     private Ellipse? _chartMarker;
     private Line? _chartGuide;
+    private int? _chartKeyboardIndex;
+    private string _chartSummary = "";
 
     private async void NetWorthRange_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -48,12 +52,15 @@ public sealed partial class MainWindow
                 + history[^1].Month.Month - snapshot.Month.Month < months).ToArray()
             : history;
         ChartEmpty.Visibility = _chartHistory.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ChartCaption.Text = _chartHistory.Count switch
+        NetWorthChartFocus.IsTabStop = _chartHistory.Count > 0;
+        _chartKeyboardIndex = null;
+        _chartSummary = _chartHistory.Count switch
         {
             0 => "Monthly snapshots · GBP",
             1 => $"{_chartHistory[0].Month:MMMM yyyy} · 1 snapshot · GBP",
             _ => $"{_chartHistory[0].Month:MMM yyyy} – {_chartHistory[^1].Month:MMM yyyy} · {_chartHistory.Count} snapshots · GBP",
         };
+        ChartCaption.Text = _chartSummary;
         DrawNetWorthChart();
         if (animate && _chartHistory.Count > 0)
         {
@@ -89,7 +96,7 @@ public sealed partial class MainWindow
         _chartPoints.Clear();
         _chartTooltip = null;
         const double top = 13;
-        const double left = 58;
+        const double left = 60;
         double right = canvas.ActualWidth - 12;
         double bottom = canvas.ActualHeight - 26;
         if (right <= left || bottom <= top)
@@ -103,15 +110,15 @@ public sealed partial class MainWindow
         double step = ChartStep((max - min + 2 * padding) / 4);
         double lower = Math.Floor((min - padding) / step) * step;
         double upper = Math.Ceiling((max + padding) / step) * step;
+        int intervals = _chartHistory.Count == 0 ? 4 : (int)Math.Round((upper - lower) / step);
 
-        for (int i = 0; i <= 4; i++)
+        for (int i = 0; i <= intervals; i++)
         {
-            double y = top + (bottom - top) * i / 4;
-            canvas.Children.Add(new Line { X1 = left, X2 = right, Y1 = y, Y2 = y, Stroke = Brush("#3A4942"), StrokeThickness = 1 });
+            double y = top + (bottom - top) * i / intervals;
+            canvas.Children.Add(new Line { X1 = left, X2 = right, Y1 = y, Y2 = y, Stroke = Brush("#343838"), StrokeThickness = 1 });
             if (_chartHistory.Count > 0)
             {
-                double tick = upper - (upper - lower) * i / 4;
-                AddChartLabel(canvas, AxisCurrency(tick), 0, y - 9, left - 8, TextAlignment.Right);
+                AddChartLabel(canvas, AxisCurrency(upper - i * step), 0, y - 9, left - 8, TextAlignment.Right);
             }
         }
 
@@ -131,10 +138,6 @@ public sealed partial class MainWindow
 
         if (_chartPoints.Count > 1)
         {
-            var gradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-            gradient.GradientStops.Add(new GradientStop { Color = ColorHelper.FromArgb(102, 218, 176, 100), Offset = 0 });
-            gradient.GradientStops.Add(new GradientStop { Color = ColorHelper.FromArgb(4, 218, 176, 100), Offset = 1 });
-
             PointCollection area = [];
             PointCollection line = [];
             area.Add(new Point(_chartPoints[0].X, bottom));
@@ -145,20 +148,20 @@ public sealed partial class MainWindow
             }
 
             area.Add(new Point(_chartPoints[^1].X, bottom));
-            canvas.Children.Add(new Polygon { Points = area, Fill = gradient });
+            canvas.Children.Add(new Polygon { Points = area, Fill = Brush("#F1CC86"), Opacity = 0.09 });
             canvas.Children.Add(new Polyline
             {
                 Points = line,
                 Stroke = Brush("#F1CC86"),
-                StrokeThickness = 3,
+                StrokeThickness = 2,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
             });
         }
 
-        var endpoint = new Ellipse { Width = 10, Height = 10, Fill = Brush("#FFE0A7"), Stroke = Brush("#19352F"), StrokeThickness = 2 };
-        Position(canvas, endpoint, _chartPoints[^1].X - 5, _chartPoints[^1].Y - 5);
+        var endpoint = new Ellipse { Width = 8, Height = 8, Fill = Brush("#FFE0A7"), Stroke = Brush("#1B1E1E"), StrokeThickness = 2 };
+        Position(canvas, endpoint, _chartPoints[^1].X - 4, _chartPoints[^1].Y - 4);
 
         int labels = Math.Min(_chartHistory.Count, Math.Clamp((int)((right - left) / 81), 1, 5));
         double previousX = double.NegativeInfinity;
@@ -173,13 +176,13 @@ public sealed partial class MainWindow
             }
         }
 
-        _chartGuide = new Line { Y1 = top, Y2 = bottom, Stroke = Brush("#6C988D"), StrokeThickness = 1, Visibility = Visibility.Collapsed };
+        _chartGuide = new Line { Y1 = top, Y2 = bottom, Stroke = Brush("#82775C"), StrokeThickness = 1, Visibility = Visibility.Collapsed };
         _chartMarker = new Ellipse { Width = 10, Height = 10, Fill = Brush("#F1CC86"), Stroke = Brush("#131515"), StrokeThickness = 2, Visibility = Visibility.Collapsed };
         _chartTooltipText = new TextBlock { FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
         _chartTooltip = new Border
         {
-            Background = Brush("#26352F"),
-            BorderBrush = Brush("#3D5959"),
+            Background = Brush("#252929"),
+            BorderBrush = Brush("#4B5150"),
             BorderThickness = new Thickness(1),
             Padding = new Thickness(9, 5, 9, 5),
             CornerRadius = new CornerRadius(6),
@@ -189,6 +192,10 @@ public sealed partial class MainWindow
         canvas.Children.Add(_chartGuide);
         canvas.Children.Add(_chartMarker);
         canvas.Children.Add(_chartTooltip);
+        if (_chartKeyboardIndex is int selected)
+        {
+            ShowChartPoint(selected);
+        }
     }
 
     private static double ChartStep(double rough)
@@ -231,7 +238,7 @@ public sealed partial class MainWindow
 
     private void NetWorthChartCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (_chartTooltip is null || _chartMarker is null || _chartGuide is null || _chartTooltipText is null)
+        if (_chartPoints.Count == 0)
         {
             return;
         }
@@ -244,6 +251,53 @@ public sealed partial class MainWindow
             {
                 index = i;
             }
+        }
+
+        ShowChartPoint(index);
+    }
+
+    private void NetWorthChartFocus_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (TryNavigateChart(e.Key))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private bool TryNavigateChart(VirtualKey key)
+    {
+        if (_chartPoints.Count == 0 || key is not (VirtualKey.Left or VirtualKey.Right or VirtualKey.Home or VirtualKey.End))
+        {
+            return false;
+        }
+
+        int last = _chartPoints.Count - 1;
+        int index = key switch
+        {
+            VirtualKey.Home => 0,
+            VirtualKey.End => last,
+            VirtualKey.Left => Math.Max(0, (_chartKeyboardIndex ?? last + 1) - 1),
+            _ => Math.Min(last, (_chartKeyboardIndex ?? -1) + 1),
+        };
+        _chartKeyboardIndex = index;
+        MonthlySnapshot snapshot = _chartHistory[index];
+        ChartCaption.Text = $"{snapshot.Month:MMMM yyyy} · {Money(snapshot.NetWorth)}";
+        ShowChartPoint(index);
+        return true;
+    }
+
+    private void NetWorthChartFocus_LostFocus(object sender, RoutedEventArgs e)
+    {
+        _chartKeyboardIndex = null;
+        ChartCaption.Text = _chartSummary;
+        HideChartPoint();
+    }
+
+    private void ShowChartPoint(int index)
+    {
+        if (_chartTooltip is null || _chartMarker is null || _chartGuide is null || _chartTooltipText is null)
+        {
+            return;
         }
 
         Point point = _chartPoints[index];
@@ -263,57 +317,90 @@ public sealed partial class MainWindow
 
     private void NetWorthChartCanvas_PointerExited(object sender, PointerRoutedEventArgs e)
     {
+        if (_chartKeyboardIndex is int index)
+        {
+            ShowChartPoint(index);
+        }
+        else
+        {
+            HideChartPoint();
+        }
+    }
+
+    private void HideChartPoint()
+    {
         if (_chartTooltip is not null && _chartMarker is not null && _chartGuide is not null)
         {
             _chartTooltip.Visibility = _chartMarker.Visibility = _chartGuide.Visibility = Visibility.Collapsed;
         }
     }
 
-    private void DrawComposition(IReadOnlyList<MonthlyBalance> balances)
+    private void UpdateBalanceBreakdown(IReadOnlyList<MonthlyBalance> balances)
     {
-        CompositionCanvas.Children.Clear();
         CompositionRows.Children.Clear();
+        if (balances.Count == 0)
+        {
+            CompositionRows.Children.Add(new TextBlock
+            {
+                Text = "Add a balance to see your assets and debts here.",
+                Foreground = Brush("#A6AFAD"),
+                TextWrapping = TextWrapping.Wrap,
+            });
+            return;
+        }
 
         var groups = new[]
         {
-            (Label: "Monzo cash", Color: "#9CE6C1", Amount: balances.Where(balance => balance.IsMonzo && !balance.IsDebt).Sum(balance => balance.Amount)),
-            (Label: "Monzo Pots", Color: "#F1CC86", Amount: balances.Where(balance => balance.Kind == "Pot").Sum(balance => balance.Amount)),
-            (Label: "Other assets", Color: "#8AAEEC", Amount: balances.Where(balance => !balance.IsMonzo && !balance.IsDebt && balance.Kind != "Pot").Sum(balance => balance.Amount)),
-            (Label: "Debts", Color: "#F3A3A0", Amount: balances.Where(balance => balance.IsDebt).Sum(balance => balance.Amount)),
+            (Label: "Monzo cash", IsDebt: false, Entries: balances.Where(balance => balance.IsMonzo && !balance.IsDebt && balance.Kind != "Pot")),
+            (Label: "Monzo Pots", IsDebt: false, Entries: balances.Where(balance => balance.Kind == "Pot" && !balance.IsDebt)),
+            (Label: "Other assets", IsDebt: false, Entries: balances.Where(balance => !balance.IsMonzo && !balance.IsDebt && balance.Kind != "Pot")),
+            (Label: "Debts", IsDebt: true, Entries: balances.Where(balance => balance.IsDebt)),
         };
 
-        decimal total = groups.Sum(group => Math.Abs(group.Amount));
-        double start = -Math.PI / 2;
-        foreach (var group in groups.Where(group => group.Label != "Monzo Pots" || balances.Any(balance => balance.Kind == "Pot")))
+        var totals = groups.Where(group => group.Entries.Any())
+            .Select(group => (group.Label, group.IsDebt, Amount: group.Entries.Sum(balance => balance.Amount)))
+            .ToArray();
+        decimal scale = totals.Max(group => Math.Abs(group.Amount));
+        foreach (var group in totals)
         {
-            bool available = balances.Count > 0 && (group.Label != "Monzo cash" || balances.Any(balance => balance.IsMonzo));
-            CompositionRows.Children.Add(BalanceLegendRow(group.Label, available ? Money(group.Amount) : "—", group.Color));
-            if (group.Amount != 0 && total > 0)
-            {
-                double sweep = (double)(Math.Abs(group.Amount) / total) * 2 * Math.PI;
-                DrawCompositionArc(start, sweep, group.Color);
-                start += sweep;
-            }
+            CompositionRows.Children.Add(BalanceBreakdownRow(group.Label, group.Amount, group.IsDebt, scale));
         }
     }
 
-    private void DrawCompositionArc(double start, double sweep, string color)
+    private static Border BalanceBreakdownRow(string label, decimal amount, bool isDebt, decimal scale)
     {
-        Point CirclePoint(double angle) => new(62 + 53.5 * Math.Cos(angle), 62 + 53.5 * Math.Sin(angle));
-
-        double gap = Math.Min(0.045, sweep / 5);
-        double arc = sweep - gap * 2;
-        var figure = new PathFigure { StartPoint = CirclePoint(start + gap), IsClosed = false };
-        figure.Segments.Add(new ArcSegment
+        var row = new Grid { ColumnSpacing = 12 };
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(new TextBlock { Text = label, Foreground = Brush("#C5CDCA"), TextWrapping = TextWrapping.Wrap });
+        var value = new TextBlock
         {
-            Point = CirclePoint(start + sweep - gap),
-            Size = new Size(53.5, 53.5),
-            IsLargeArc = arc > Math.PI,
-            SweepDirection = SweepDirection.Clockwise,
-        });
-        var geometry = new PathGeometry();
-        geometry.Figures.Add(figure);
-        CompositionCanvas.Children.Add(new Path { Data = geometry, Stroke = Brush(color), StrokeThickness = 9 });
+            Text = Money(amount),
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = Brush(isDebt || amount < 0 ? "#F3A3A0" : "#F4F6F5"),
+        };
+        Grid.SetColumn(value, 1);
+        row.Children.Add(value);
+
+        var meter = new ProgressBar
+        {
+            Maximum = 1,
+            Value = scale > 0 ? (double)(Math.Abs(amount) / scale) : 0,
+            Foreground = Brush(isDebt || amount < 0 ? "#D7827E" : "#D9AE5E"),
+            Background = Brush("#343838"),
+            IsHitTestVisible = false,
+        };
+        AutomationProperties.SetAccessibilityView(meter, AccessibilityView.Raw);
+        var content = new StackPanel { Spacing = 8 };
+        content.Children.Add(row);
+        content.Children.Add(meter);
+        return new Border
+        {
+            BorderBrush = Brush("#343838"),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 12, 0, 12),
+            Child = content,
+        };
     }
 
     private static Grid BalanceLegendRow(string label, string amount, string color)

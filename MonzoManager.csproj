@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <Product>Parc Spend</Product>
+    <Version>1.1.0</Version>
     <AssemblyTitle>Parc Spend</AssemblyTitle>
     <Description>Parc Spend tracks personal net worth, spending, and cash flow.</Description>
     <ApplicationIcon>Assets\Parc.ico</ApplicationIcon>

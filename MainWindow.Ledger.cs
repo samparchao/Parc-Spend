@@ -282,7 +282,8 @@ public sealed partial class MainWindow
                 var share = new TextBox { Header = "Ownership (%)", Text = account.Ownership.ToString("0.##", Uk) };
                 TextBox? balance = account.IsMonzo ? null : new TextBox
                 {
-                    Header = "Current balance (£)", PlaceholderText = account.Kind == "Credit card" ? "Negative amount owed" : "Optional",
+                    Header = "Current balance (£)",
+                    PlaceholderText = account.Kind == "Credit card" ? "Negative amount owed" : "Optional",
                     Text = account.Balance?.ToString("0.##", Uk) ?? "",
                 };
                 string details = account.IsMonzo
@@ -305,9 +306,12 @@ public sealed partial class MainWindow
             panel.Children.Add(error);
             var dialog = new ContentDialog
             {
-                Title = "Manage accounts", XamlRoot = RootGrid.XamlRoot,
+                Title = "Manage accounts",
+                XamlRoot = RootGrid.XamlRoot,
                 Content = new ScrollViewer { Content = panel, MaxHeight = 420 },
-                PrimaryButtonText = "Save", SecondaryButtonText = "Add statement account", CloseButtonText = "Done",
+                PrimaryButtonText = "Save",
+                SecondaryButtonText = "Add statement account",
+                CloseButtonText = "Done",
             };
             var updates = new Dictionary<string, LedgerAccount>();
             dialog.PrimaryButtonClick += (dialogSender, args) =>
@@ -337,8 +341,10 @@ public sealed partial class MainWindow
 
                     updates[row.Account.Id] = row.Account with
                     {
-                        Name = row.Name.Text.Trim(), Enabled = row.Include.IsChecked == true,
-                        Ownership = ownership, Balance = balance,
+                        Name = row.Name.Text.Trim(),
+                        Enabled = row.Include.IsChecked == true,
+                        Ownership = ownership,
+                        Balance = balance,
                     };
                 }
             };
@@ -367,8 +373,12 @@ public sealed partial class MainWindow
         panel.Children.Add(kind);
         var dialog = new ContentDialog
         {
-            XamlRoot = RootGrid.XamlRoot, Title = "Add statement account", Content = panel,
-            PrimaryButtonText = "Add account", CloseButtonText = "Cancel", IsPrimaryButtonEnabled = false,
+            XamlRoot = RootGrid.XamlRoot,
+            Title = "Add statement account",
+            Content = panel,
+            PrimaryButtonText = "Add account",
+            CloseButtonText = "Cancel",
+            IsPrimaryButtonEnabled = false,
         };
         name.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(name.Text);
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
@@ -402,8 +412,11 @@ public sealed partial class MainWindow
             options.Children.Add(reverse);
             var destination = new ContentDialog
             {
-                XamlRoot = RootGrid.XamlRoot, Title = "Choose the statement account", Content = options,
-                PrimaryButtonText = "Choose CSV", CloseButtonText = "Cancel",
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "Choose the statement account",
+                Content = options,
+                PrimaryButtonText = "Choose CSV",
+                CloseButtonText = "Cancel",
             };
             if (await destination.ShowAsync() != ContentDialogResult.Primary || choose.SelectedItem is not LedgerAccount account)
             {
@@ -462,8 +475,11 @@ public sealed partial class MainWindow
             panel.Children.Add(error);
             var preview = new ContentDialog
             {
-                XamlRoot = RootGrid.XamlRoot, Title = "Review statement import", Content = panel,
-                PrimaryButtonText = "Import transactions", CloseButtonText = "Cancel",
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "Review statement import",
+                Content = panel,
+                PrimaryButtonText = "Import transactions",
+                CloseButtonText = "Cancel",
             };
             preview.PrimaryButtonClick += (_, args) =>
             {
@@ -495,9 +511,9 @@ public sealed partial class MainWindow
     private void UpdateCoverage(DateTime from, DateTime until, string accountId, bool allTime)
     {
         LedgerAccount[] accounts = EnabledAccounts().Where(account => accountId.Length == 0 || account.Id == accountId).ToArray();
+        LedgerCoverageText.Visibility = accounts.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         if (accounts.Length == 0)
         {
-            LedgerCoverageText.Text = "Connect Monzo or import a statement to start your transaction history.";
             return;
         }
 

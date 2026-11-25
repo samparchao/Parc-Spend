@@ -31,13 +31,13 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Flushes structured logs during application shutdown.
+    /// Records the type of an unhandled UI error without serializing its contents.
     /// </summary>
     /// <param name="sender">The application instance.</param>
-    /// <param name="e">Exit event arguments.</param>
+    /// <param name="e">The unhandled UI exception event.</param>
     private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        Log.Error(e.Exception, "Unhandled UI exception.");
+        Log.Error("Unhandled UI exception ({ErrorType}).", e.Exception.GetType().Name);
     }
 
     /// <summary>
@@ -62,7 +62,8 @@ public partial class App : Application
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
-            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
+            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7,
+                fileSizeLimitBytes: 1024 * 1024, rollOnFileSizeLimit: true)
             .CreateLogger();
     }
 }

@@ -218,8 +218,12 @@ internal sealed class LedgerService
             string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{fingerprint}|{ordinal}")));
             rows.Add(new Transaction
             {
-                AccountId = accountId, Id = $"{accountId}:{key}", Created = day.AddHours(12).ToUniversalTime(),
-                Amount = signedAmount, Currency = "GBP", Description = name,
+                AccountId = accountId,
+                Id = $"{accountId}:{key}",
+                Created = day.AddHours(12).ToUniversalTime(),
+                Amount = signedAmount,
+                Currency = "GBP",
+                Description = name,
                 Category = Value(category) is { Length: > 0 } label ? label : null,
             });
 

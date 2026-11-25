@@ -111,7 +111,7 @@ public sealed class NetWorthService : INetWorthService
         }
         catch (Exception exception)
         {
-            Log.Error(exception, "Failed to record net-worth snapshot.");
+            Log.Error("Failed to record a net-worth snapshot ({ErrorType}).", exception.GetType().Name);
         }
         finally
         {
@@ -138,7 +138,7 @@ public sealed class NetWorthService : INetWorthService
         }
         catch (Exception exception)
         {
-            Log.Error(exception, "Failed to load net-worth snapshots.");
+            Log.Error("Failed to load net-worth snapshots ({ErrorType}).", exception.GetType().Name);
             return Array.Empty<NetWorthSnapshot>();
         }
         finally

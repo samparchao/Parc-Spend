@@ -23,7 +23,7 @@ using Windows.Foundation;
 namespace MonzoManager;
 
 /// <summary>
-/// Main WinUI window with premium dashboard, analytics, and budget tooling.
+/// Presents the Parc Spend balances, transaction activity, and planning tools.
 /// </summary>
 public sealed partial class MainWindow : Window
 {
@@ -577,9 +577,12 @@ public sealed partial class MainWindow : Window
         {
             TransactionsListView.SelectedItem = _transactions.FirstOrDefault(item => item.Id == selectedId);
         }
-        ActivityEmptyText.Visibility = _transactions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        bool hasTransactions = _transactions.Count > 0;
+        TransactionColumns.Visibility = TransactionsListView.Visibility = hasTransactions ? Visibility.Visible : Visibility.Collapsed;
+        TransactionPaging.Visibility = results.Length > TransactionPageSize ? Visibility.Visible : Visibility.Collapsed;
+        ActivityEmptyText.Visibility = hasTransactions ? Visibility.Collapsed : Visibility.Visible;
         ActivityEmptyText.Text = _activityTransactions.Count == 0
-            ? "Sync Monzo or import a statement to see transactions." : "No transactions match these filters.";
+            ? "Connect or refresh Monzo in Settings, or import a statement." : "No transactions match these filters.";
     }
 
     private void PreviousTransactions_Click(object sender, RoutedEventArgs e)
@@ -833,7 +836,7 @@ public sealed partial class MainWindow : Window
         else
         {
             CashFlowHealthTextBlock.Text = "Health: Healthy";
-            CashFlowPolyline.Stroke = new SolidColorBrush(ColorHelper.FromArgb(255, 96, 165, 250));
+            CashFlowPolyline.Stroke = Brush("#F1CC86");
         }
 
         CashTightWeeks.Text = lowWeeks.Count == 0

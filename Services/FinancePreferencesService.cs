@@ -110,10 +110,19 @@ internal sealed class FinancePreferencesService
                     }
                     break;
                 case "budgets.json":
-                    _ = JsonConvert.DeserializeObject<MonzoManager.Models.Budget[]>(value);
+                    if (JsonConvert.DeserializeObject<MonzoManager.Models.Budget[]>(value) is not { } budgets
+                        || budgets.Any(budget => budget is null || string.IsNullOrWhiteSpace(budget.Category)
+                            || budget.CycleDay is < 0 or > 31))
+                    {
+                        throw new InvalidDataException("The backup has invalid budget records.");
+                    }
                     break;
                 case "networth-history.json":
-                    _ = JsonConvert.DeserializeObject<NetWorthSnapshot[]>(value);
+                    if (JsonConvert.DeserializeObject<NetWorthSnapshot[]>(value) is not { } snapshots
+                        || snapshots.Any(snapshot => snapshot is null))
+                    {
+                        throw new InvalidDataException("The backup has invalid net-worth records.");
+                    }
                     break;
                 case LedgerService.FileName:
                     if (JsonConvert.DeserializeObject<LedgerState>(value) is not
@@ -122,13 +131,25 @@ internal sealed class FinancePreferencesService
                         || ledger.Transactions.Select(row => row.Id).Distinct().Count() != ledger.Transactions.Count
                         || ledger.Accounts.Any(account => account is null || string.IsNullOrWhiteSpace(account.Id) || account.Ownership is < 0 or > 100)
                         || ledger.Accounts.Select(account => account.Id).Distinct().Count() != ledger.Accounts.Count
-                        || ledger.Annotations.Values.Any(annotation => annotation is null || annotation.Splits is null))
+                        || ledger.Pots.Any(pot => pot is null || string.IsNullOrWhiteSpace(pot.Id)
+                            || string.IsNullOrWhiteSpace(pot.AccountId) || string.IsNullOrWhiteSpace(pot.Name))
+                        || ledger.Coverage.Any(range => range is null || string.IsNullOrWhiteSpace(range.AccountId)
+                            || range.FromUtc >= range.UntilUtc)
+                        || ledger.Planned.Any(expense => expense is null || string.IsNullOrWhiteSpace(expense.Id)
+                            || string.IsNullOrWhiteSpace(expense.Name) || expense.Amount <= 0)
+                        || ledger.Annotations.Values.Any(annotation => annotation?.Splits is null
+                            || annotation.Splits.Any(split => split is null || string.IsNullOrWhiteSpace(split.Category))))
                     {
                         throw new InvalidDataException("The backup has an invalid transaction ledger.");
                     }
                     break;
                 case "finance-preferences.json":
-                    if (JsonConvert.DeserializeObject<FinancePreferences>(value) is not { Goals: not null, TransactionRules: not null, MerchantRules: not null })
+                    if (JsonConvert.DeserializeObject<FinancePreferences>(value) is not
+                        { Goals: not null, TransactionRules: not null, MerchantRules: not null } preferences
+                        || preferences.Goals.Any(goal => goal is null || string.IsNullOrWhiteSpace(goal.Name)
+                            || string.IsNullOrWhiteSpace(goal.AccountId) || goal.Target <= 0)
+                        || preferences.TransactionRules.Values.Any(rule => rule is null)
+                        || preferences.MerchantRules.Values.Any(rule => rule is null))
                     {
                         throw new InvalidDataException("The backup has invalid workspace preferences.");
                     }

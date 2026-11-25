@@ -47,7 +47,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#PublishDirectory}\*"; DestDir: "{app}"; Excludes: "*.pdb,MonzoManager.xml,*.log,credentials.dat,credentials.json,tokens.dat,tokens.json,manual-finance.json,monthly-net-worth.json,finance-preferences.json,transaction-ledger.json,budgets.json,networth-history.json,restore-pending.dat"; Flags: recursesubdirs ignoreversion
+Source: "{#PublishDirectory}\*"; DestDir: "{app}"; Excludes: "*.pdb,MonzoManager.xml,*.log,*.csv,*.xlsx,*.monzobak,.env*,*.p12,*.pfx,credentials.dat,credentials.json,tokens.dat,tokens.json,manual-finance.json,monthly-net-worth.json,finance-preferences.json,transaction-ledger.json,budgets.json,networth-history.json,restore-pending.dat"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Parc Spend"; Filename: "{app}\MonzoManager.exe"; WorkingDir: "{app}"

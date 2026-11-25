@@ -82,7 +82,7 @@ public sealed class BudgetService : IBudgetService
         }
         catch (Exception exception)
         {
-            Log.Error(exception, "Failed to read budgets from disk.");
+            Log.Error("Failed to read saved budgets ({ErrorType}).", exception.GetType().Name);
             return Array.Empty<Budget>();
         }
         finally

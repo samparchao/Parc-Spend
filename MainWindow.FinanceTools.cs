@@ -72,6 +72,8 @@ public sealed partial class MainWindow
     {
         RefreshNetWorthOverview();
         UpdateChartRange(animate: true);
+        FadeIn(NetWorthValue);
+        FadeIn(CompositionRows);
         if (_preferencesLoaded)
         {
             await PersistViewAsync();
