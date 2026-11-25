@@ -38,15 +38,33 @@ bld/
 
 # Local app settings
 appsettings.local.json
+.env
+.env.*
+!.env.example
 *.db
 *.db-shm
 *.db-wal
 
-# Monzo credentials
+# Parc Spend profile, exports and Monzo credentials
 tokens.json
 tokens.dat
 credentials.json
 credentials.dat
+manual-finance.json
+monthly-net-worth.json
+networth-history.json
+finance-preferences.json
+transaction-ledger.json
+budgets.json
+restore-pending.dat
+*.monzobak
+*.log
+*.csv
+*.xls
+*.xlsx
+*.pfx
+*.p12
+*.pdb
 
 # OS
 .DS_Store

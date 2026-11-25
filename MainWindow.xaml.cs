@@ -23,12 +23,12 @@ using Windows.Foundation;
 namespace MonzoManager;
 
 /// <summary>
-/// Main WinUI window with premium dashboard, analytics, and budget tooling.
+/// Presents the Parc Spend balances, transaction activity, and planning tools.
 /// </summary>
 public sealed partial class MainWindow : Window
 {
     private readonly IAuthService _authService;
-    private readonly IMonzoService _monzoService;
+    private readonly MonzoService _monzoService;
     private readonly IBudgetService _budgetService;
     private readonly ManualFinanceService _manualFinanceService;
 
@@ -39,11 +39,13 @@ public sealed partial class MainWindow : Window
     private readonly ObservableCollection<CashFlowEventItem> _cashFlowEvents = [];
     private readonly ObservableCollection<SubscriptionItem> _subscriptions = [];
 
-    private readonly List<Transaction> _monzoTransactions = [];
+    private readonly List<Transaction> _ledgerTransactions = [];
     private readonly List<Transaction> _activityTransactions = [];
     private readonly List<Transaction> _rawTransactions = [];
     private readonly List<Budget> _rawBudgets = [];
     private decimal _currentBalance;
+    private int _transactionPage;
+    private const int TransactionPageSize = 200;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -77,6 +79,11 @@ public sealed partial class MainWindow : Window
         CategoryFilterComboBox.ItemsSource = new[] { "All categories" };
         CategoryFilterComboBox.SelectedIndex = 0;
         DateFilterComboBox.ItemsSource = new[] { "All time", "Last 7 days", "Last 30 days", "This month" };
+        LedgerStatusFilter.ItemsSource = new[] { "All statuses", "Pending", "Settled", "Declined", "Reimbursements" };
+        LedgerStatusFilter.SelectedIndex = 0;
+        BudgetCyclePicker.ItemsSource = new[] { "One-off", "Calendar month" }
+            .Concat(Enumerable.Range(2, 30).Select(day => $"Payday · {day}")).ToArray();
+        BudgetCyclePicker.SelectedIndex = 1;
         DateFilterComboBox.SelectedIndex = 0;
         SortFilterComboBox.ItemsSource = new[] { "Newest first", "Oldest first", "Largest spend", "Largest income" };
         SortFilterComboBox.SelectedIndex = 0;
@@ -110,6 +117,7 @@ public sealed partial class MainWindow : Window
         await LoadBudgetsAsync().ConfigureAwait(true);
         await LoadManualFinanceAsync();
         await LoadMonthlyHistoryAsync();
+        await LoadLedgerAsync();
 
         if (await _authService.EnsureValidTokenAsync().ConfigureAwait(true))
         {
@@ -150,7 +158,7 @@ public sealed partial class MainWindow : Window
         {
             await _authService.SaveAccessTokenAsync(accessToken, userId).ConfigureAwait(true);
             SetStatus("Access token saved securely. Refreshing data...", InfoBarSeverity.Success);
-            await LoadDashboardAsync().ConfigureAwait(true);
+            await SyncMonzoLedgerAsync(backfill: true);
         }
         catch (Exception exception)
         {
@@ -159,8 +167,34 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void LoginButton_Click(object sender, RoutedEventArgs e)
+    private async void LoginButton_Click(object sender, RoutedEventArgs e) => await ConnectMonzoAsync(backfill: true);
+
+    private async void BackfillHistory_Click(object sender, RoutedEventArgs e)
     {
+        await RunFinanceActionAsync(async () =>
+        {
+            if (await _authService.HasStoredCredentialsAsync())
+            {
+                await ConnectMonzoAsync(backfill: true);
+            }
+            else if (await _authService.EnsureValidTokenAsync())
+            {
+                await SyncMonzoLedgerAsync(backfill: true);
+            }
+            else
+            {
+                SetStatus("Connect Monzo or enter a fresh access token to backfill.", InfoBarSeverity.Warning);
+            }
+        }, "Could not backfill Monzo history.");
+    }
+
+    private async Task ConnectMonzoAsync(bool backfill)
+    {
+        if (!LoginButton.IsEnabled)
+        {
+            return;
+        }
+
         LoginButton.IsEnabled = false;
         try
         {
@@ -180,7 +214,7 @@ public sealed partial class MainWindow : Window
             }
 
             SetStatus("Login complete. Loading account data...", InfoBarSeverity.Success);
-            await LoadDashboardAsync().ConfigureAwait(true);
+            await SyncMonzoLedgerAsync(backfill);
         }
         catch (Exception exception)
         {
@@ -227,7 +261,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (!decimal.TryParse(BudgetLimitTextBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal limit) || limit <= 0)
+        if (!TryReadAmount(BudgetLimitTextBox.Text, allowNegative: false, out decimal limit) || limit <= 0)
         {
             SetStatus("Budget limit must be a positive number.", InfoBarSeverity.Warning);
             return;
@@ -238,9 +272,18 @@ public sealed partial class MainWindow : Window
             Id = category,
             Category = category,
             Limit = limit,
-            StartDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1),
-            EndDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(1).AddDays(-1),
+            CycleDay = Math.Max(0, BudgetCyclePicker.SelectedIndex),
+            Rollover = BudgetCyclePicker.SelectedIndex > 0 && BudgetRollover.IsChecked == true,
         };
+
+        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+        int cycle = Math.Max(1, budget.CycleDay);
+        DateOnly start = LedgerService.CycleStart(today, cycle);
+        Budget? previous = _rawBudgets.FirstOrDefault(item => item.Id == budget.Id);
+        budget.StartDate = budget.CycleDay > 0 && previous?.CycleDay == budget.CycleDay
+            && previous.Limit == budget.Limit && previous.Rollover == budget.Rollover
+            ? previous.StartDate : start.ToDateTime(TimeOnly.MinValue);
+        budget.EndDate = LedgerService.InMonth(start.AddMonths(1), cycle).AddDays(-1).ToDateTime(TimeOnly.MinValue);
 
         await _budgetService.SaveBudgetAsync(budget).ConfigureAwait(true);
         await LoadBudgetsAsync().ConfigureAwait(true);
@@ -262,37 +305,7 @@ public sealed partial class MainWindow : Window
         SetStatus($"Deleted budget for {selectedItem.Category}.", InfoBarSeverity.Success);
     }
 
-    private async Task LoadDashboardAsync()
-    {
-        Account? account = await _monzoService.GetAccountAsync().ConfigureAwait(true);
-        if (account is null)
-        {
-            SetStatus("Could not fetch account details from Monzo.", InfoBarSeverity.Error);
-            return;
-        }
-
-        IReadOnlyList<Transaction> transactions = await _monzoService.GetTransactionsAsync(200).ConfigureAwait(true);
-
-        _monzoTransactions.Clear();
-        _monzoTransactions.AddRange(transactions);
-
-        AccountIdTextBlock.Text = $"Account {account.Id}";
-        BalanceTextBlock.Text = FormatCurrency(account.Balance);
-        CurrencyTextBlock.Text = account.Currency;
-        TotalCashTextBlock.Text = Money(account.Balance);
-        _currentBalance = account.Balance;
-        _connectedAccountId = account.Id;
-        _hasMonzoBalance = true;
-        _lastMonzoSync = DateTime.Now;
-        ConnectedAccount.Visibility = Visibility.Visible;
-        ConnectionLabel.Text = "Monzo connected";
-        ConnectionDot.Fill = Brush("#6CE4BD");
-
-        RefreshTransactionViews();
-        RefreshNetWorthOverview();
-
-        SetStatus($"Loaded {transactions.Count} transactions.", InfoBarSeverity.Success);
-    }
+    private Task LoadDashboardAsync() => SyncMonzoLedgerAsync(backfill: false);
 
     private async Task LoadBudgetsAsync()
     {
@@ -313,13 +326,13 @@ public sealed partial class MainWindow : Window
         TotalSpentTextBlock.Text = $"Total spent: {FormatCurrency(totalSpent)}";
 
         var categoryTotals = _rawTransactions
-            .Where(transaction => SpendEffect(transaction) != 0 && !string.IsNullOrWhiteSpace(transaction.Category))
-            .GroupBy(transaction => transaction.Category!, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(SpendPostings)
+            .GroupBy(posting => posting.Category, StringComparer.OrdinalIgnoreCase)
             .Select(
                 group => new
                 {
                     Category = group.Key,
-                    Spent = group.Sum(SpendEffect),
+                    Spent = group.Sum(posting => posting.Amount),
                 })
             .Where(item => item.Spent > 0)
             .OrderByDescending(item => item.Spent)
@@ -351,58 +364,94 @@ public sealed partial class MainWindow : Window
             : "Savings rate: —";
     }
 
-    private void ApplyBudgetSpend()
-    {
-        foreach (Budget budget in _rawBudgets)
-        {
-            budget.Spent = Math.Max(0, _rawTransactions
-                .Where(transaction =>
-                    string.Equals(transaction.Category, budget.Category, StringComparison.OrdinalIgnoreCase)
-                    && transaction.Created.ToLocalTime().Date >= budget.StartDate.Date
-                    && transaction.Created.ToLocalTime().Date <= budget.EndDate.Date)
-                .Sum(SpendEffect));
-        }
-
-        RebuildBudgetRows();
-    }
+    private void ApplyBudgetSpend() => RebuildBudgetRows();
 
     private void RebuildBudgetRows()
     {
         _budgetRows.Clear();
         _budgetAlerts.Clear();
 
+        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+        DateTime asOfUtc = DateTime.UtcNow.AddMinutes(-5);
+        LedgerAccount[] accounts = EnabledAccounts().ToArray();
+        var postings = _rawTransactions
+            .SelectMany(transaction => SpendPostings(transaction).Select(posting => (Day: DateOnly.FromDateTime(transaction.Created.ToLocalTime()), Posting: posting)))
+            .ToLookup(item => item.Posting.Category, StringComparer.OrdinalIgnoreCase);
+        decimal totalBudget = 0;
+        decimal totalSpent = 0;
+
         foreach (Budget budget in _rawBudgets)
         {
-            decimal progress = budget.Limit > 0 ? Math.Min(budget.Spent / budget.Limit, 1.0m) : 0;
-            bool isOverBudget = budget.Spent > budget.Limit && budget.Limit > 0;
-
-            if (isOverBudget)
+            bool recurring = budget.CycleDay is >= 1 and <= 31;
+            DateOnly first = DateOnly.FromDateTime(budget.StartDate);
+            DateOnly start = recurring ? LedgerService.CycleStart(today, budget.CycleDay) : first;
+            DateOnly next = recurring ? LedgerService.InMonth(start.AddMonths(1), budget.CycleDay)
+                : DateOnly.FromDateTime(budget.EndDate).AddDays(1);
+            decimal carry = 0;
+            bool incompleteRollover = false;
+            if (recurring && budget.Rollover && first < start)
             {
-                decimal overBy = budget.Spent - budget.Limit;
-                _budgetAlerts.Add($"⚠ {budget.Category}: over budget by {FormatCurrency(overBy)}");
+                for (DateOnly period = first; period < start;)
+                {
+                    DateOnly following = LedgerService.InMonth(period.AddMonths(1), budget.CycleDay);
+                    if (accounts.Length > 0 && accounts.All(account => LedgerService.Covers(_ledger, account,
+                        period.ToDateTime(TimeOnly.MinValue).ToUniversalTime(), following.ToDateTime(TimeOnly.MinValue).ToUniversalTime())))
+                    {
+                        carry = Math.Max(0, budget.Limit + carry - Spending(period, following));
+                    }
+                    else
+                    {
+                        incompleteRollover = true;
+                        carry = 0;
+                    }
+                    period = following;
+                }
             }
 
-            _budgetRows.Add(
-                new BudgetRowItem(
-                    budget.Id,
-                    budget.Category,
-                    $"Limit: {FormatCurrency(budget.Limit)}",
-                    $"Spent: {FormatCurrency(budget.Spent)}",
-                    (double)progress,
-                    isOverBudget ? "Over budget" : $"{progress:P0}",
-                    $"{budget.StartDate:yyyy-MM-dd} → {budget.EndDate:yyyy-MM-dd}"));
+            decimal Spending(DateOnly from, DateOnly until) => Math.Max(0, postings[budget.Category]
+                .Where(item => item.Day >= from && item.Day < until).Sum(item => item.Posting.Amount));
+
+            decimal limit = budget.Limit + carry;
+            decimal spent = Spending(start, next);
+            double progress = limit > 0 ? (double)Math.Min(spent / limit, 1m) : 0;
+            bool over = limit > 0 && spent > limit;
+            DateTime endUtc = next.ToDateTime(TimeOnly.MinValue).ToUniversalTime();
+            DateTime through = endUtc < asOfUtc ? endUtc : asOfUtc;
+            bool incomplete = accounts.Length == 0 || accounts.Any(account =>
+                !LedgerService.Covers(_ledger, account, start.ToDateTime(TimeOnly.MinValue).ToUniversalTime(), through));
+
+            string range = $"{start:dd MMM} – {next.AddDays(-1):dd MMM}";
+            if (carry > 0)
+            {
+                range += $" · {Money(carry)} carried";
+            }
+            if (incompleteRollover)
+            {
+                range += " · partial carry";
+            }
+
+            if (over && today >= start && today < next)
+            {
+                _budgetAlerts.Add($"{budget.Category}: over budget by {Money(spent - limit)}");
+            }
+
+            _budgetRows.Add(new BudgetRowItem(budget.Id, budget.Category, $"Limit: {Money(limit)}", $"Spent: {Money(spent)}",
+                progress, incomplete ? "Incomplete data" : over ? "Over budget" : $"{progress:P0}", range));
+
+            if (today >= start && today < next)
+            {
+                totalBudget += limit;
+                totalSpent += spent;
+            }
         }
 
         if (_budgetAlerts.Count == 0)
         {
-            _budgetAlerts.Add("No overspend alerts. You're on track.");
+            _budgetAlerts.Add("No overspend alerts for the transactions recorded.");
         }
 
-        decimal totalBudget = _rawBudgets.Sum(budget => budget.Limit);
-        decimal totalSpent = _rawBudgets.Sum(budget => budget.Spent);
         BudgetUtilisationTextBlock.Text = totalBudget > 0
-            ? $"{(totalSpent / totalBudget) * 100:F0}% of total budget used"
-            : "No budgets yet";
+            ? $"{(totalSpent / totalBudget) * 100:F0}% of active budgets used" : "No active budgets";
     }
 
     private void RebuildCategoryFilterOptions()
@@ -412,7 +461,8 @@ public sealed partial class MainWindow : Window
         [
             "All categories",
             .. _activityTransactions
-                .Select(transaction => transaction.Category ?? "uncategorized")
+                .SelectMany(transaction => SpendPostings(transaction).Select(item => item.Category)
+                    .Append(transaction.Category ?? "uncategorized"))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(category => category, StringComparer.OrdinalIgnoreCase),
         ];
@@ -423,8 +473,13 @@ public sealed partial class MainWindow : Window
             : "All categories";
     }
 
-    private void ApplyTransactionFilters()
+    private void ApplyTransactionFilters(bool resetPage = true)
     {
+        if (resetPage)
+        {
+            _transactionPage = 0;
+        }
+
         IEnumerable<Transaction> filtered = _activityTransactions;
         string searchTerm = TransactionSearchTextBox.Text?.Trim() ?? string.Empty;
         string selectedCategory = CategoryFilterComboBox.SelectedItem?.ToString() ?? "All categories";
@@ -448,20 +503,43 @@ public sealed partial class MainWindow : Window
                     StringComparison.OrdinalIgnoreCase));
         }
 
-        DateTime utcNow = DateTime.UtcNow;
-        if (string.Equals(dateFilter, "Last 7 days", StringComparison.Ordinal))
+        string accountId = (LedgerAccountFilter.SelectedItem as LedgerAccount)?.Id ?? "";
+        if (accountId.Length != 0)
         {
-            filtered = filtered.Where(transaction => transaction.Created >= utcNow.AddDays(-7));
+            filtered = filtered.Where(transaction => transaction.AccountId == accountId);
         }
-        else if (string.Equals(dateFilter, "Last 30 days", StringComparison.Ordinal))
+        filtered = (LedgerStatusFilter.SelectedItem as string) switch
         {
-            filtered = filtered.Where(transaction => transaction.Created >= utcNow.AddDays(-30));
-        }
-        else if (string.Equals(dateFilter, "This month", StringComparison.Ordinal))
+            "Pending" => filtered.Where(item => item.IsPending),
+            "Settled" => filtered.Where(item => !item.IsPending && !item.IsDeclined),
+            "Declined" => filtered.Where(item => item.IsDeclined),
+            "Reimbursements" => filtered.Where(item => AnnotationFor(item.Id).ExpectedReimbursement > 0
+                || TransactionStatus(item) == "Linked reimbursement"),
+            _ => filtered,
+        };
+        DateTime today = DateTime.Today;
+        DateTime now = DateTime.UtcNow;
+        DateTime from = new DateTime(today.Year, today.Month, 1).ToUniversalTime();
+        DateTime until = now;
+        if (dateFilter == "Last 7 days")
         {
-            DateTime monthStart = new(utcNow.Year, utcNow.Month, 1);
-            filtered = filtered.Where(transaction => transaction.Created >= monthStart);
+            from = now.AddDays(-7);
         }
+        else if (dateFilter == "Last 30 days")
+        {
+            from = now.AddDays(-30);
+        }
+        else if (DateTime.TryParseExact(dateFilter, "MMMM yyyy", Uk, DateTimeStyles.None, out DateTime month))
+        {
+            from = month.ToUniversalTime();
+            until = month.AddMonths(1).ToUniversalTime();
+        }
+
+        if (dateFilter != "All time")
+        {
+            filtered = filtered.Where(item => item.Created >= from && item.Created < until);
+        }
+        UpdateCoverage(from, until, accountId, dateFilter == "All time");
 
         filtered = sortFilter switch
         {
@@ -471,22 +549,52 @@ public sealed partial class MainWindow : Window
             _ => filtered.OrderByDescending(transaction => transaction.Created),
         };
 
+        Transaction[] results = filtered.ToArray();
+        int lastPage = Math.Max(0, (results.Length - 1) / TransactionPageSize);
+        _transactionPage = Math.Clamp(_transactionPage, 0, lastPage);
+        int first = _transactionPage * TransactionPageSize;
+        int shown = Math.Min(TransactionPageSize, results.Length - first);
+        TransactionPagerText.Text = results.Length == 0 ? "" : $"{first + 1:N0}–{first + shown:N0} of {results.Length:N0}";
+        PreviousTransactionsButton.IsEnabled = _transactionPage > 0;
+        NextTransactionsButton.IsEnabled = _transactionPage < lastPage;
+
+        string? selectedId = (TransactionsListView.SelectedItem as TransactionRowItem)?.Id;
         _transactions.Clear();
-        foreach (Transaction transaction in filtered)
+        var accountNames = _ledger.Accounts.ToDictionary(account => account.Id, account => account.Name);
+        foreach (Transaction transaction in results.Skip(first).Take(shown))
         {
             _transactions.Add(
                 new TransactionRowItem(
+                    transaction.Id,
                     transaction.Created.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                     transaction.Description ?? "(no description)",
                     transaction.Category ?? "uncategorized",
                     transaction.Merchant ?? "-",
-                    $"{transaction.Created.ToLocalTime():yyyy-MM-dd HH:mm} · {(RuleFor(transaction)?.Treatment is { } label && label != FinancePreferences.Normal ? label : transaction.Merchant ?? "—")}",
+                    $"{transaction.Created.ToLocalTime():yyyy-MM-dd HH:mm} · {accountNames.GetValueOrDefault(transaction.AccountId, "Account")} · {TransactionStatus(transaction)}",
                     FormatCurrency(transaction.Amount)));
         }
-        ActivityEmptyText.Visibility = _transactions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ActivityEmptyText.Text = !_hasMonzoBalance
-            ? "Connect Monzo in Settings to see your transactions."
-            : _activityTransactions.Count == 0 ? "No transactions returned from Monzo." : "No transactions match these filters.";
+        if (selectedId is not null)
+        {
+            TransactionsListView.SelectedItem = _transactions.FirstOrDefault(item => item.Id == selectedId);
+        }
+        bool hasTransactions = _transactions.Count > 0;
+        TransactionColumns.Visibility = TransactionsListView.Visibility = hasTransactions ? Visibility.Visible : Visibility.Collapsed;
+        TransactionPaging.Visibility = results.Length > TransactionPageSize ? Visibility.Visible : Visibility.Collapsed;
+        ActivityEmptyText.Visibility = hasTransactions ? Visibility.Collapsed : Visibility.Visible;
+        ActivityEmptyText.Text = _activityTransactions.Count == 0
+            ? "Connect or refresh Monzo in Settings, or import a statement." : "No transactions match these filters.";
+    }
+
+    private void PreviousTransactions_Click(object sender, RoutedEventArgs e)
+    {
+        _transactionPage--;
+        ApplyTransactionFilters(resetPage: false);
+    }
+
+    private void NextTransactions_Click(object sender, RoutedEventArgs e)
+    {
+        _transactionPage++;
+        ApplyTransactionFilters(resetPage: false);
     }
 
     private void TransactionSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -515,6 +623,8 @@ public sealed partial class MainWindow : Window
         CategoryFilterComboBox.SelectedIndex = 0;
         DateFilterComboBox.SelectedIndex = 0;
         SortFilterComboBox.SelectedIndex = 0;
+        LedgerAccountFilter.SelectedIndex = 0;
+        LedgerStatusFilter.SelectedIndex = 0;
         ApplyTransactionFilters();
     }
 
@@ -620,8 +730,25 @@ public sealed partial class MainWindow : Window
 
     private void UpdateCashFlowForecast()
     {
-        if (!_workspaceReady || !_hasMonzoBalance)
+        if (!_workspaceReady)
         {
+            return;
+        }
+
+        MonthlyBalance[] opening = LinkedMonthlyBalances().Where(balance => balance.Kind == "Cash").ToArray();
+        if (opening.Length == 0)
+        {
+            opening = _holdings.Where(entry => entry.Kind == "Cash").Select(ToMonthlyBalance).ToArray();
+        }
+
+        if (opening.Length == 0)
+        {
+            ProjectedEndBalanceTextBlock.Text = "Sync Monzo or enter a current-account balance to forecast cash flow.";
+            ForecastComparisonText.Text = "";
+            CashFlowHealthTextBlock.Text = "";
+            CashTightWeeks.Text = "";
+            CashFlowPolyline.Points = [];
+            _cashFlowEvents.Clear();
             return;
         }
 
@@ -632,18 +759,30 @@ public sealed partial class MainWindow : Window
             _ => 30,
         };
 
-        var recurringPatterns = DetectRecurringPatterns(_rawTransactions.Where(transaction => !IsRefund(transaction)).ToArray());
+        HashSet<string> cashAccounts = EnabledAccounts().Where(account => account.Kind != "Credit card" && account.Balance.HasValue)
+            .Select(account => account.Id).ToHashSet();
+        Transaction[] cashActivity = _rawTransactions.Where(item => cashAccounts.Contains(item.AccountId)).ToArray();
+        var recurringPatterns = DetectRecurringPatterns(cashActivity.Where(transaction => !IsRefund(transaction)).ToArray());
         DateTime thirtyDaysAgo = DateTime.Today.AddDays(-30);
         HashSet<string> recurringNames = recurringPatterns.Where(pattern => pattern.Amount < 0)
             .Select(pattern => pattern.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        decimal recentDailySpend = _rawTransactions.Where(transaction => transaction.Created.ToLocalTime().Date >= thirtyDaysAgo
+        decimal recentDailySpend = cashActivity.Where(transaction => transaction.Created.ToLocalTime().Date >= thirtyDaysAgo
                 && !recurringNames.Contains(TransactionParty(transaction)))
             .Sum(SpendEffect) / 30;
-        List<ForecastEvent> events = BuildForecastEvents(recurringPatterns, horizonDays, Math.Max(0, recentDailySpend));
-
-        decimal runningBalance = _currentBalance;
+        List<ForecastEvent> baseline = BuildForecastEvents(recurringPatterns, horizonDays, Math.Max(0, recentDailySpend));
         DateTime startDate = DateTime.Today;
         DateTime endDate = startDate.AddDays(horizonDays);
+        decimal runningBalance = opening.Sum(balance => balance.Amount);
+        ForecastEvent[] planned = LedgerService.Occurrences(_ledger.Planned,
+                DateOnly.FromDateTime(startDate), DateOnly.FromDateTime(endDate))
+            .Select(item => new ForecastEvent(item.Date.ToDateTime(TimeOnly.MinValue), item.Expense.Name, -item.Expense.Amount)).ToArray();
+        List<ForecastEvent> scenario = baseline.Where(estimate => !planned.Any(expense => estimate.Amount < 0
+                && !estimate.IsEstimate && string.Equals(estimate.Title, expense.Title, StringComparison.OrdinalIgnoreCase)
+                && Math.Abs((estimate.Date - expense.Date).TotalDays) <= 3))
+            .Concat(planned).ToList();
+        List<ForecastEvent> events = IncludePlannedExpenses.IsChecked == true ? scenario : baseline;
+        ForecastComparisonText.Text = planned.Length == 0 ? ""
+            : $"Without planned expenses {Money(runningBalance + baseline.Sum(item => item.Amount))} · with them {Money(runningBalance + scenario.Sum(item => item.Amount))}";
 
         PointCollection points = [];
         double width = Math.Max(0, CashFlowCanvas.ActualWidth - 8);
@@ -697,7 +836,7 @@ public sealed partial class MainWindow : Window
         else
         {
             CashFlowHealthTextBlock.Text = "Health: Healthy";
-            CashFlowPolyline.Stroke = new SolidColorBrush(ColorHelper.FromArgb(255, 96, 165, 250));
+            CashFlowPolyline.Stroke = Brush("#F1CC86");
         }
 
         CashTightWeeks.Text = lowWeeks.Count == 0
@@ -811,6 +950,7 @@ public sealed partial class MainWindow : Window
     }
 
     private sealed record TransactionRowItem(
+        string Id,
         string Date,
         string Description,
         string Category,

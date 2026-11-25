@@ -1,12 +1,16 @@
 param(
     [string]$Configuration = "Release",
-    [string]$Runtime = "win-x64"
+    [string]$Runtime = "win-x64",
+    [string]$OutputDirectory
 )
 
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Path $PSScriptRoot -Parent
-$publishDir = Join-Path $projectRoot "artifacts\publish\$Runtime"
+if (-not $OutputDirectory) {
+    $OutputDirectory = Join-Path $projectRoot "artifacts\publish\$Runtime"
+}
+$publishDir = [IO.Path]::GetFullPath($OutputDirectory)
 $msbuild = (Get-Command MSBuild.exe -ErrorAction SilentlyContinue).Source
 if (-not $msbuild) {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
@@ -41,6 +45,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Publish complete."
-
-
-

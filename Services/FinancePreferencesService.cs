@@ -32,7 +32,7 @@ internal sealed class FinancePreferencesService
 {
     private static readonly string[] BackupNames =
     [
-        "manual-finance.json", "monthly-net-worth.json", "budgets.json", "finance-preferences.json", "networth-history.json",
+        "manual-finance.json", "monthly-net-worth.json", "budgets.json", "finance-preferences.json", "networth-history.json", LedgerService.FileName,
     ];
 
     private static readonly string PreferencesPath = Path.Combine(LocalFiles.DataDirectory, "finance-preferences.json");
@@ -76,7 +76,7 @@ internal sealed class FinancePreferencesService
 
         string json = await Task.Run(() => LocalFiles.DecryptBackup(buffer.ToArray(), password));
         var files = JsonConvert.DeserializeObject<Dictionary<string, string?>>(json);
-        if (files is null || !files.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(BackupNames))
+        if (files is null || !ValidWorkspaceNames(files))
         {
             throw new InvalidDataException("This backup does not contain a complete finance workspace.");
         }
@@ -110,13 +110,46 @@ internal sealed class FinancePreferencesService
                     }
                     break;
                 case "budgets.json":
-                    _ = JsonConvert.DeserializeObject<MonzoManager.Models.Budget[]>(value);
+                    if (JsonConvert.DeserializeObject<MonzoManager.Models.Budget[]>(value) is not { } budgets
+                        || budgets.Any(budget => budget is null || string.IsNullOrWhiteSpace(budget.Category)
+                            || budget.CycleDay is < 0 or > 31))
+                    {
+                        throw new InvalidDataException("The backup has invalid budget records.");
+                    }
                     break;
                 case "networth-history.json":
-                    _ = JsonConvert.DeserializeObject<NetWorthSnapshot[]>(value);
+                    if (JsonConvert.DeserializeObject<NetWorthSnapshot[]>(value) is not { } snapshots
+                        || snapshots.Any(snapshot => snapshot is null))
+                    {
+                        throw new InvalidDataException("The backup has invalid net-worth records.");
+                    }
+                    break;
+                case LedgerService.FileName:
+                    if (JsonConvert.DeserializeObject<LedgerState>(value) is not
+                        { Accounts: not null, Transactions: not null, Pots: not null, Coverage: not null, Planned: not null, Annotations: not null } ledger
+                        || ledger.Transactions.Any(row => row is null || string.IsNullOrWhiteSpace(row.Id))
+                        || ledger.Transactions.Select(row => row.Id).Distinct().Count() != ledger.Transactions.Count
+                        || ledger.Accounts.Any(account => account is null || string.IsNullOrWhiteSpace(account.Id) || account.Ownership is < 0 or > 100)
+                        || ledger.Accounts.Select(account => account.Id).Distinct().Count() != ledger.Accounts.Count
+                        || ledger.Pots.Any(pot => pot is null || string.IsNullOrWhiteSpace(pot.Id)
+                            || string.IsNullOrWhiteSpace(pot.AccountId) || string.IsNullOrWhiteSpace(pot.Name))
+                        || ledger.Coverage.Any(range => range is null || string.IsNullOrWhiteSpace(range.AccountId)
+                            || range.FromUtc >= range.UntilUtc)
+                        || ledger.Planned.Any(expense => expense is null || string.IsNullOrWhiteSpace(expense.Id)
+                            || string.IsNullOrWhiteSpace(expense.Name) || expense.Amount <= 0)
+                        || ledger.Annotations.Values.Any(annotation => annotation?.Splits is null
+                            || annotation.Splits.Any(split => split is null || string.IsNullOrWhiteSpace(split.Category))))
+                    {
+                        throw new InvalidDataException("The backup has an invalid transaction ledger.");
+                    }
                     break;
                 case "finance-preferences.json":
-                    if (JsonConvert.DeserializeObject<FinancePreferences>(value) is not { Goals: not null, TransactionRules: not null, MerchantRules: not null })
+                    if (JsonConvert.DeserializeObject<FinancePreferences>(value) is not
+                        { Goals: not null, TransactionRules: not null, MerchantRules: not null } preferences
+                        || preferences.Goals.Any(goal => goal is null || string.IsNullOrWhiteSpace(goal.Name)
+                            || string.IsNullOrWhiteSpace(goal.AccountId) || goal.Target <= 0)
+                        || preferences.TransactionRules.Values.Any(rule => rule is null)
+                        || preferences.MerchantRules.Values.Any(rule => rule is null))
                     {
                         throw new InvalidDataException("The backup has invalid workspace preferences.");
                     }
@@ -136,7 +169,7 @@ internal sealed class FinancePreferencesService
 
         string json = await LocalFiles.ReadFinanceAsync(RestoreJournal);
         var original = JsonConvert.DeserializeObject<Dictionary<string, string?>>(json);
-        if (original is null || !original.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(BackupNames))
+        if (original is null || !ValidWorkspaceNames(original))
         {
             throw new InvalidDataException("The restore recovery file is invalid.");
         }
@@ -162,11 +195,18 @@ internal sealed class FinancePreferencesService
         }
     }
 
+    private static bool ValidWorkspaceNames(IReadOnlyDictionary<string, string?> files) =>
+        files.Keys.All(name => BackupNames.Contains(name, StringComparer.Ordinal))
+        && BackupNames.Where(name => name != LedgerService.FileName).All(files.ContainsKey);
+
     private static async Task ApplyFilesAsync(IReadOnlyDictionary<string, string?> files)
     {
         foreach (string name in BackupNames)
         {
-            await ApplyFileAsync(name, files[name]);
+            if (files.TryGetValue(name, out string? content))
+            {
+                await ApplyFileAsync(name, content);
+            }
         }
     }
 

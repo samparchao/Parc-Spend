@@ -200,7 +200,7 @@ public sealed class AuthService : IAuthService
         MonzoCredentials? credentials = await LoadCredentialsAsync(cancellationToken).ConfigureAwait(false);
         if (credentials is null)
         {
-            Log.Error("Unable to log in because credentials file was not found or invalid: {Path}", _credentialsFilePath);
+            Log.Error("Unable to log in because the stored credentials are missing or invalid.");
             return false;
         }
 
@@ -227,7 +227,7 @@ public sealed class AuthService : IAuthService
         }
         catch (HttpListenerException exception)
         {
-            Log.Error(exception, "Failed to start OAuth callback listener on {Prefix}", listenerPrefix);
+            Log.Error("Failed to start the local OAuth callback listener (code {ErrorCode}).", exception.ErrorCode);
             return false;
         }
 
@@ -602,7 +602,7 @@ public sealed class AuthService : IAuthService
         }
         catch (Exception exception)
         {
-            Log.Error(exception, "Failed to load token file.");
+            Log.Error("Failed to load the stored token ({ErrorType}).", exception.GetType().Name);
             return null;
         }
     }

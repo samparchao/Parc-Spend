@@ -3,22 +3,24 @@
 <Window
     x:Class="MonzoManager.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:local="using:MonzoManager"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid x:Name="RootGrid" RequestedTheme="Dark" Background="#131515" SizeChanged="RootGrid_SizeChanged">
+    <Grid x:Name="RootGrid" RequestedTheme="Dark" Background="#141616" SizeChanged="RootGrid_SizeChanged">
         <Grid.Resources>
             <SolidColorBrush x:Key="Muted" Color="#A6AFAD" />
             <SolidColorBrush x:Key="Mint" Color="#9CE6C1" />
-            <SolidColorBrush x:Key="CardBackground" Color="#1C1F20" />
-            <SolidColorBrush x:Key="CardStroke" Color="#363B3C" />
+            <SolidColorBrush x:Key="Accent" Color="#F1CC86" />
+            <SolidColorBrush x:Key="CardBackground" Color="#1B1E1E" />
+            <SolidColorBrush x:Key="CardStroke" Color="#343838" />
             <Style x:Key="Card" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource CardBackground}" />
                 <Setter Property="BorderBrush" Value="{StaticResource CardStroke}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="18" />
-                <Setter Property="Padding" Value="24" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16" />
             </Style>
             <Style x:Key="CardTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="19" />
+                <Setter Property="FontSize" Value="16" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Style>
             <Style x:Key="MutedText" TargetType="TextBlock">
@@ -26,7 +28,7 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
             <Style x:Key="BalanceValue" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="27" />
+                <Setter Property="FontSize" Value="23" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
@@ -47,14 +49,14 @@
             <TextBlock Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Muted}" FontSize="12" Text="Parc Spend" />
         </Border>
 
-        <Grid Grid.Row="1" Background="#171A19">
+        <Grid Grid.Row="1" Background="#171A19" BorderBrush="{StaticResource CardStroke}" BorderThickness="0,0,1,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <StackPanel Margin="16,27,6,28" Orientation="Horizontal" Spacing="9">
-                <Image Width="32" Height="32" Source="ms-appx:///Assets/Parc.png" AutomationProperties.AccessibilityView="Raw" />
+            <StackPanel Margin="16,24,8,24" Orientation="Horizontal" Spacing="8">
+                <Image Width="28" Height="28" Source="ms-appx:///Assets/Parc.png" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock VerticalAlignment="Center" FontSize="16" AutomationProperties.Name="Parc Spend"><Run Text="Parc " FontWeight="Bold" /><Run Text="Spend" /></TextBlock>
             </StackPanel>
             <ListView x:Name="WorkspaceNavigation" Grid.Row="1" Margin="8,0" SelectionMode="Single" SelectionChanged="WorkspaceNavigation_SelectionChanged"
@@ -75,8 +77,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE713;" FontSize="16" /><TextBlock Text="Settings" /></StackPanel>
                 </ListViewItem>
             </ListView>
-            <StackPanel Grid.Row="2" Margin="20,20,18,24" Spacing="6">
-                <Rectangle Height="1" Fill="#363B3C" Margin="0,0,0,12" />
+            <StackPanel Grid.Row="2" Margin="16,16,16,24" Spacing="6">
+                <Rectangle Height="1" Fill="#343838" Margin="0,0,0,12" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Ellipse x:Name="ConnectionDot" Width="7" Height="7" Fill="#899490" />
                     <TextBlock x:Name="ConnectionLabel" Foreground="{StaticResource Muted}" FontSize="12" Text="Manual tracking" />
@@ -84,125 +86,123 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Grid.Column="1" MaxWidth="1440">
+        <Grid Grid.Row="1" Grid.Column="1" MaxWidth="1360">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <ScrollViewer x:Name="WorkspaceScroll" HorizontalContentAlignment="Stretch" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <StackPanel x:Name="WorkspaceBody" Padding="30,27,30,28" Spacing="22">
+                <StackPanel x:Name="WorkspaceBody" Padding="32,24,32,32" Spacing="24">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Spacing="3">
-                            <TextBlock x:Name="WorkspaceTitle" Text="Overview" FontSize="37" FontWeight="SemiBold" />
-                            <TextBlock x:Name="WorkspaceSubtitle" Style="{StaticResource MutedText}" Text="Your balances and net worth over time." />
-                        </StackPanel>
-                        <Button x:Name="OverviewAction" Grid.Column="1" Click="OpenNetWorth_Click" MinHeight="40" Padding="15,8"
+                        <TextBlock x:Name="WorkspaceTitle" Text="Overview" FontSize="30" FontWeight="SemiBold"
+                            VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level1" />
+                        <Button x:Name="OverviewAction" Grid.Column="1" Click="OpenNetWorth_Click" MinHeight="36" Padding="12,6"
                             Style="{StaticResource AccentButtonStyle}" Content="Track balances" />
                     </Grid>
 
-                    <StackPanel x:Name="OverviewPage" Spacing="18">
-                        <Grid x:Name="OverviewLayout" ColumnSpacing="18" RowSpacing="18">
+                    <StackPanel x:Name="OverviewPage" Spacing="16">
+                        <Grid x:Name="OverviewLayout" ColumnSpacing="16" RowSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2.2*" />
+                                <ColumnDefinition Width="2.4*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <Border Style="{StaticResource Card}">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#20342C" Offset="0" />
-                                        <GradientStop Color="#1D2522" Offset="0.64" />
-                                        <GradientStop Color="#1C1F20" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
+                            <Border Style="{StaticResource Card}" Padding="20">
                                 <StackPanel Spacing="12">
-                                    <Grid ColumnSpacing="6">
+                                    <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="OverviewChartTitle" Style="{StaticResource CardTitle}" Text="Net worth" VerticalAlignment="Center" />
-                                        <ComboBox x:Name="NetWorthRange" Grid.Column="1" SelectedIndex="0" SelectionChanged="NetWorthRange_SelectionChanged" AutomationProperties.Name="Net worth chart range">
+                                        <TextBlock x:Name="OverviewChartTitle" Style="{StaticResource CardTitle}" Text="Net worth"
+                                            VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                                        <ComboBox x:Name="NetWorthRange" Grid.Column="1" SelectedIndex="0"
+                                            SelectionChanged="NetWorthRange_SelectionChanged" AutomationProperties.Name="Net worth chart range">
                                             <ComboBoxItem Content="All time" Tag="0" />
                                             <ComboBoxItem Content="12 months" Tag="12" />
                                             <ComboBoxItem Content="6 months" Tag="6" />
                                         </ComboBox>
                                     </Grid>
                                     <StackPanel Spacing="4">
-                                        <TextBlock x:Name="NetWorthValue" Text="—" FontSize="48" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock x:Name="NetWorthChange" Style="{StaticResource MutedText}" Text="Track balances to calculate your net worth." />
-                                        <CheckBox x:Name="AccessibleView" Content="Show accessible savings" Click="AccessibleView_Click" />
+                                        <TextBlock x:Name="NetWorthValue" Text="—" FontSize="38" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="NetWorthChange" Style="{StaticResource MutedText}" />
                                     </StackPanel>
-                                    <Grid Height="223" Margin="0,5,0,0">
-                                        <Canvas x:Name="NetWorthChartCanvas" Background="Transparent" SizeChanged="NetWorthChartCanvas_SizeChanged"
-                                            PointerMoved="NetWorthChartCanvas_PointerMoved" PointerPressed="NetWorthChartCanvas_PointerMoved" PointerExited="NetWorthChartCanvas_PointerExited"
-                                            AutomationProperties.Name="Monthly net worth chart" />
+                                    <Grid Height="230">
+                                        <ContentControl x:Name="NetWorthChartFocus" IsTabStop="False" HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" Background="Transparent" UseSystemFocusVisuals="True"
+                                            KeyDown="NetWorthChartFocus_KeyDown" LostFocus="NetWorthChartFocus_LostFocus"
+                                            AutomationProperties.Name="Monthly balance chart"
+                                            AutomationProperties.HelpText="Use the left and right arrow keys to explore monthly balances.">
+                                            <Canvas x:Name="NetWorthChartCanvas" Background="Transparent" SizeChanged="NetWorthChartCanvas_SizeChanged"
+                                                PointerMoved="NetWorthChartCanvas_PointerMoved" PointerPressed="NetWorthChartCanvas_PointerMoved"
+                                                PointerExited="NetWorthChartCanvas_PointerExited" />
+                                        </ContentControl>
                                         <StackPanel x:Name="ChartEmpty" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Padding="13,9" Background="#26352F" CornerRadius="8" IsHitTestVisible="False" Spacing="4">
+                                            Padding="12,8" Background="{StaticResource CardBackground}" IsHitTestVisible="False" Spacing="4">
                                             <TextBlock Text="No monthly history yet" FontWeight="SemiBold" TextAlignment="Center" />
-                                            <TextBlock Text="Record a month or import your spreadsheet." Style="{StaticResource MutedText}" TextAlignment="Center" />
+                                            <TextBlock Text="Review a month or import a CSV in Net worth." Style="{StaticResource MutedText}" TextAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
-                                    <TextBlock x:Name="ChartCaption" Style="{StaticResource MutedText}" FontSize="12" Text="Monthly snapshots · GBP" />
+                                    <Border BorderBrush="{StaticResource CardStroke}" BorderThickness="0,1,0,0" Padding="0,4,0,0">
+                                        <local:ActionRow>
+                                            <CheckBox x:Name="AccessibleView" Content="Accessible savings only" Click="AccessibleView_Click" />
+                                            <TextBlock x:Name="ChartCaption" Style="{StaticResource MutedText}" FontSize="12"
+                                                Padding="0,8" Text="Monthly snapshots · GBP" AutomationProperties.LiveSetting="Polite" />
+                                        </local:ActionRow>
+                                    </Border>
                                 </StackPanel>
                             </Border>
 
-                            <Border x:Name="CompositionCard" Grid.Column="1" Style="{StaticResource Card}">
-                                <StackPanel Spacing="13">
-                                    <TextBlock Style="{StaticResource CardTitle}" Text="Balance breakdown" />
-                                    <TextBlock Style="{StaticResource MutedText}" Text="Your assets and debts at a glance." />
-                                    <Grid Width="124" Height="124" HorizontalAlignment="Left">
-                                        <Ellipse Width="116" Height="116" Stroke="#343E3A" StrokeThickness="9" />
-                                        <Canvas x:Name="CompositionCanvas" Width="124" Height="124" IsHitTestVisible="False" />
-                                        <FontIcon Glyph="&#xE8C7;" FontSize="26" Foreground="{StaticResource Mint}" />
-                                    </Grid>
-                                    <StackPanel x:Name="CompositionRows" Spacing="10" />
-                                    <Button Click="OpenNetWorth_Click" Content="Manage balances" Margin="0,4,0,0" />
+                            <Border x:Name="CompositionCard" Grid.Column="1" Style="{StaticResource Card}" Padding="20">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="Balance breakdown" AutomationProperties.HeadingLevel="Level2" />
+                                    <StackPanel x:Name="CompositionRows" />
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <Grid x:Name="OverviewMetrics" ColumnSpacing="14" RowSpacing="14">
-                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource Card}">
-                                <StackPanel Spacing="5">
-                                    <FontIcon Glyph="&#xE8C7;" HorizontalAlignment="Left" FontSize="16" Foreground="{StaticResource Mint}" />
-                                    <TextBlock Style="{StaticResource MutedText}" Text="Monzo balance" />
+                        <Border Style="{StaticResource Card}" Padding="0">
+                            <Grid x:Name="OverviewMetrics" RowSpacing="0" ColumnSpacing="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                <StackPanel Padding="16" Spacing="4">
+                                    <TextBlock Style="{StaticResource MutedText}" Text="Monzo available cash" />
                                     <TextBlock x:Name="TotalCashTextBlock" Style="{StaticResource BalanceValue}" Text="—" />
+                                    <TextBlock x:Name="OverviewPotsText" Style="{StaticResource MutedText}" Visibility="Collapsed" />
                                 </StackPanel>
-                            </Border>
-                            <Border x:Name="IncomeCard" Grid.Column="1" Style="{StaticResource Card}">
-                                <StackPanel Spacing="5">
-                                    <FontIcon Glyph="&#xE896;" HorizontalAlignment="Left" FontSize="16" Foreground="#9DBAF7" />
-                                    <TextBlock Style="{StaticResource MutedText}" Text="Monzo income this month" />
-                                    <TextBlock x:Name="MonthlyIncomeTextBlock" Style="{StaticResource BalanceValue}" Text="—" />
-                                </StackPanel>
-                            </Border>
-                            <Border x:Name="SpendingCard" Grid.Column="2" Style="{StaticResource Card}">
-                                <StackPanel Spacing="5">
-                                    <FontIcon Glyph="&#xE894;" HorizontalAlignment="Left" FontSize="16" Foreground="#E7AE78" />
-                                    <TextBlock Style="{StaticResource MutedText}" Text="Monzo spending this month" />
-                                    <TextBlock x:Name="MonthlySpendTextBlock" Style="{StaticResource BalanceValue}" Text="—" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                                <Border x:Name="IncomeCard" Grid.Column="1" BorderBrush="{StaticResource CardStroke}" BorderThickness="1,0,0,0" Padding="16">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Style="{StaticResource MutedText}" Text="Income this month" />
+                                        <TextBlock x:Name="MonthlyIncomeTextBlock" Style="{StaticResource BalanceValue}" Text="—" />
+                                    </StackPanel>
+                                </Border>
+                                <Border x:Name="SpendingCard" Grid.Column="2" BorderBrush="{StaticResource CardStroke}" BorderThickness="1,0,0,0" Padding="16">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Style="{StaticResource MutedText}" Text="Spending this month" />
+                                        <TextBlock x:Name="MonthlySpendTextBlock" Style="{StaticResource BalanceValue}" Text="—" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <TextBlock x:Name="OverviewCoverageText" Style="{StaticResource MutedText}" />
                     </StackPanel>
 
-                    <StackPanel x:Name="NetWorthPage" Spacing="18" Visibility="Collapsed">
+                    <StackPanel x:Name="NetWorthPage" Spacing="16" Visibility="Collapsed">
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="14">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="3">
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Tracked balances" />
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="Tracked balances" AutomationProperties.HeadingLevel="Level2" />
                                         <TextBlock x:Name="TrackedBalanceNote" Style="{StaticResource MutedText}" Text="Add pensions, savings, investments or debts you want included." />
                                     </StackPanel>
                                     <Button Grid.Column="1" Content="Add balance" Click="AddBalance_Click" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Top" />
@@ -228,14 +228,14 @@
                         </Border>
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="13">
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Monthly history" />
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Monthly history" AutomationProperties.HeadingLevel="Level2" />
                                 <TextBlock Style="{StaticResource MutedText}" Text="Review balances and explain what changed, or import previous months from a spreadsheet CSV." />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <local:ActionRow>
                                     <Button Click="MonthlyReview_Click" Content="Review this month" Style="{StaticResource AccentButtonStyle}" />
                                     <Button Click="ImportHistory_Click" Content="Import CSV" />
                                     <Button Click="OpenHistoryGrid_Click" Content="History grid" />
                                     <Button Click="UndoFinance_Click" x:Name="UndoFinanceButton" Content="Undo" IsEnabled="False" />
-                                </StackPanel>
+                                </local:ActionRow>
                                 <TextBlock x:Name="HistoryEmpty" Style="{StaticResource MutedText}" Text="No snapshots yet." />
                                 <ListView x:Name="HistoryList" IsItemClickEnabled="True" ItemClick="HistoryList_ItemClick" SelectionMode="None"
                                     ItemContainerStyle="{StaticResource StretchRow}" MaxHeight="400" AutomationProperties.Name="Monthly snapshots">
@@ -256,382 +256,361 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                    <StackPanel x:Name="ActivityPage" Spacing="18" Visibility="Collapsed">
-                <Grid
-                    x:Name="ActivityLayout"
-                    ColumnSpacing="16">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*" />
-                        <ColumnDefinition Width="2*" />
-                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="ActivityPage" Spacing="16" Visibility="Collapsed">
+                        <Grid
+                            x:Name="ActivityLayout"
+                            ColumnSpacing="16">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3*" />
+                                <ColumnDefinition Width="2*" />
+                            </Grid.ColumnDefinitions>
 
-                    <Border
-                        Grid.Column="0"
-                        Padding="20"
-                        CornerRadius="18"
-                        BorderBrush="#363B3C"
-                        BorderThickness="1"
-                        Background="#1C1F20">
-                        <StackPanel Spacing="14">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Recent transactions" />
-                                <Button Click="ReviewTransactions_Click" Content="Review &amp; categorise" />
-                            </StackPanel>
-                            <TextBox x:Name="TransactionSearchTextBox" PlaceholderText="Search transactions" TextChanged="TransactionSearchTextBox_TextChanged" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="CategoryFilterComboBox" AutomationProperties.Name="Category" SelectionChanged="CategoryFilterComboBox_SelectionChanged" />
-                                <ComboBox x:Name="DateFilterComboBox" AutomationProperties.Name="Date range" SelectionChanged="DateFilterComboBox_SelectionChanged" />
-                                <ComboBox x:Name="SortFilterComboBox" AutomationProperties.Name="Sort by" SelectionChanged="SortFilterComboBox_SelectionChanged" />
-                                <Button Click="ClearFiltersButton_Click" Content="Clear" />
-                            </StackPanel>
-                            <TextBlock x:Name="ActivityEmptyText" Foreground="{StaticResource Muted}" Text="Connect Monzo in Settings to see your transactions." TextWrapping="Wrap" />
-                            <Grid ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="115" />
-                                    <ColumnDefinition Width="100" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Foreground="#A6AFAD" Text="Description" />
-                                <TextBlock Grid.Column="1" Foreground="#A6AFAD" Text="Category" />
-                                <TextBlock Grid.Column="2" HorizontalAlignment="Right" Foreground="#A6AFAD" Text="Amount" />
-                            </Grid>
-                            <ListView
-                                x:Name="TransactionsListView"
-                                MaxHeight="420"
-                                SelectionMode="None">
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                        <Setter Property="Padding" Value="0" />
-                                    </Style>
-                                </ListView.ItemContainerStyle>
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Padding="0,8" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="115" />
-                                                <ColumnDefinition Width="100" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" Spacing="2">
-                                                <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Opacity="0.65" FontSize="12" Text="{Binding Meta}" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1" Opacity="0.85" Text="{Binding Category}" />
-                                            <TextBlock
-                                                Grid.Column="2"
-                                                HorizontalAlignment="Right"
-                                                TextAlignment="Right"
-                                                FontWeight="SemiBold"
-                                                FontFamily="Cascadia Mono"
-                                                Text="{Binding Amount}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </StackPanel>
-                    </Border>
+                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                                <StackPanel Spacing="14">
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="Transactions" AutomationProperties.HeadingLevel="Level2" />
+                                    <local:ActionRow>
+                                        <Button Click="ImportStatement_Click" Content="Import statement" />
+                                        <Button Click="ReviewTransactions_Click" Content="Review &amp; categorise" />
+                                        <Button x:Name="EditSelectedTransaction" Click="EditTransaction_Click" Content="Edit selected" IsEnabled="False" />
+                                    </local:ActionRow>
+                                    <TextBox x:Name="TransactionSearchTextBox" PlaceholderText="Search transactions" AutomationProperties.Name="Search transactions"
+                                        TextChanged="TransactionSearchTextBox_TextChanged" />
+                                    <local:ActionRow>
+                                        <ComboBox x:Name="LedgerAccountFilter" DisplayMemberPath="Name" AutomationProperties.Name="Account"
+                                            SelectionChanged="LedgerAccountFilter_SelectionChanged" />
+                                        <ComboBox x:Name="LedgerStatusFilter" AutomationProperties.Name="Transaction status"
+                                            SelectionChanged="LedgerAccountFilter_SelectionChanged" />
+                                        <ComboBox x:Name="CategoryFilterComboBox" AutomationProperties.Name="Category" SelectionChanged="CategoryFilterComboBox_SelectionChanged" />
+                                        <ComboBox x:Name="DateFilterComboBox" AutomationProperties.Name="Date range" SelectionChanged="DateFilterComboBox_SelectionChanged" />
+                                        <ComboBox x:Name="SortFilterComboBox" AutomationProperties.Name="Sort by" SelectionChanged="SortFilterComboBox_SelectionChanged" />
+                                        <Button Click="ClearFiltersButton_Click" Content="Clear filters" />
+                                    </local:ActionRow>
+                                    <TextBlock x:Name="LedgerCoverageText" Style="{StaticResource MutedText}" />
+                                    <TextBlock x:Name="ActivityEmptyText" Foreground="{StaticResource Muted}" Text="Connect Monzo in Settings to see your transactions." TextWrapping="Wrap" />
+                                    <Grid x:Name="TransactionColumns" ColumnSpacing="12" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="0.65*" />
+                                            <ColumnDefinition Width="Auto" MinWidth="88" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Foreground="#A6AFAD" Text="Description" />
+                                        <TextBlock Grid.Column="1" Foreground="#A6AFAD" Text="Category" />
+                                        <TextBlock Grid.Column="2" HorizontalAlignment="Right" Foreground="#A6AFAD" Text="Amount" />
+                                    </Grid>
+                                    <ListView
+                                        x:Name="TransactionsListView"
+                                        Visibility="Collapsed"
+                                        MaxHeight="420"
+                                        SelectionMode="Single" SelectionChanged="TransactionsListView_SelectionChanged"
+                                        AutomationProperties.Name="Transactions">
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem">
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Padding" Value="0" />
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Padding="0,8" ColumnSpacing="12" BorderBrush="{StaticResource CardStroke}" BorderThickness="0,0,0,1">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="0.65*" />
+                                                        <ColumnDefinition Width="Auto" MinWidth="88" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Spacing="2">
+                                                        <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Opacity="0.65" FontSize="12" Text="{Binding Meta}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Opacity="0.85" Text="{Binding Category}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock
+                                                        Grid.Column="2"
+                                                        HorizontalAlignment="Right"
+                                                        TextAlignment="Right"
+                                                        FontWeight="SemiBold"
+                                                        FontFamily="Cascadia Mono"
+                                                        Text="{Binding Amount}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                    <local:ActionRow x:Name="TransactionPaging" Visibility="Collapsed">
+                                        <Button x:Name="PreviousTransactionsButton" Content="Previous" Click="PreviousTransactions_Click" IsEnabled="False" />
+                                        <TextBlock x:Name="TransactionPagerText" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
+                                        <Button x:Name="NextTransactionsButton" Content="Next" Click="NextTransactions_Click" IsEnabled="False" />
+                                    </local:ActionRow>
+                                </StackPanel>
+                            </Border>
 
-                    <StackPanel
-                        x:Name="ActivityInsights" Grid.Column="1"
-                        Spacing="16">
-                        <Border
-                            Padding="20"
-                            CornerRadius="18"
-                            BorderBrush="#363B3C"
-                            BorderThickness="1"
-                            Background="#1C1F20">
-                            <StackPanel Spacing="10">
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Spending overview" />
-                                <TextBlock x:Name="TotalSpentTextBlock" FontWeight="SemiBold" Text="Total spent: -" />
-                                <TextBlock x:Name="TopCategoryTextBlock" Text="Top category: -" />
-                                <TextBlock x:Name="TransactionCountTextBlock" Text="Transactions: -" />
-                                <TextBlock x:Name="ThisMonthSpendTextBlock" Text="This month spend: -" />
-                                <TextBlock x:Name="ThisMonthIncomeTextBlock" Text="This month income: -" />
-                                <TextBlock x:Name="ThisMonthNetTextBlock" FontWeight="SemiBold" Text="This month net: —" />
-                                <TextBlock x:Name="SavingsRateTextBlock" Text="Savings rate: —" />
+                            <StackPanel
+                                x:Name="ActivityInsights" Grid.Column="1"
+                                Spacing="16">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="Spending overview" AutomationProperties.HeadingLevel="Level2" />
+                                        <TextBlock x:Name="TotalSpentTextBlock" FontWeight="SemiBold" Text="Total spent: -" />
+                                        <TextBlock x:Name="TopCategoryTextBlock" Text="Top category: -" />
+                                        <TextBlock x:Name="TransactionCountTextBlock" Text="Transactions: -" />
+                                        <TextBlock x:Name="ThisMonthSpendTextBlock" Text="This month spend: -" />
+                                        <TextBlock x:Name="ThisMonthIncomeTextBlock" Text="This month income: -" />
+                                        <TextBlock x:Name="ThisMonthNetTextBlock" FontWeight="SemiBold" Text="This month net: —" />
+                                        <TextBlock x:Name="SavingsRateTextBlock" Text="Savings rate: —" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="Top categories" AutomationProperties.HeadingLevel="Level2" />
+                                        <ListView
+                                            x:Name="CategorySummaryListView"
+                                            SelectionMode="None">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Padding="0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Category}" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            FontWeight="SemiBold"
+                                                            Text="{Binding Amount}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="Budget alerts" AutomationProperties.HeadingLevel="Level2" />
+                                        <ListView
+                                            x:Name="BudgetAlertsListView"
+                                            SelectionMode="None">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </Border>
-                        <Border
-                            Padding="20"
-                            CornerRadius="18"
-                            BorderBrush="#363B3C"
-                            BorderThickness="1"
-                            Background="#1C1F20">
-                            <StackPanel Spacing="12">
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Top categories" />
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel x:Name="PlanningPage" Spacing="16" Visibility="Collapsed">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="14">
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Budgets" AutomationProperties.HeadingLevel="Level2" />
+                                <local:ActionRow>
+                                    <ComboBox x:Name="BudgetCyclePicker" Header="Repeats" />
+                                    <CheckBox x:Name="BudgetRollover" Content="Carry unused funds forward" VerticalAlignment="Bottom" />
+                                </local:ActionRow>
+                                <TextBlock x:Name="BudgetUtilisationTextBlock" Style="{StaticResource MutedText}" Text="No budgets yet" />
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox
+                                        x:Name="BudgetCategoryTextBox"
+                                        Header="Category"
+                                        PlaceholderText="e.g. groceries" />
+                                    <TextBox
+                                        x:Name="BudgetLimitTextBox"
+                                        Grid.Column="1"
+                                        Header="Limit (£)"
+                                        PlaceholderText="300" />
+                                </Grid>
+                                <local:ActionRow>
+                                    <Button Click="AddBudgetButton_Click" Content="Save budget" />
+                                    <Button Click="DeleteBudgetButton_Click" Content="Delete selected" />
+                                </local:ActionRow>
+
                                 <ListView
-                                    x:Name="CategorySummaryListView"
-                                    SelectionMode="None">
+                                    x:Name="BudgetsListView"
+                                    SelectionMode="Single">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
                                     <ListView.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Padding="0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Category}" />
-                                                <TextBlock
-                                                    Grid.Column="1"
-                                                    FontWeight="SemiBold"
-                                                    Text="{Binding Amount}" />
-                                            </Grid>
+                                            <Border
+                                                Padding="0,8"
+                                                BorderBrush="{StaticResource CardStroke}"
+                                                BorderThickness="0,0,0,1">
+                                                <Grid ColumnSpacing="12" RowSpacing="4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Category}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="1" HorizontalAlignment="Right" Text="{Binding Spent}" />
+                                                    <TextBlock Grid.Column="2" HorizontalAlignment="Right" Text="{Binding Limit}" />
+                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="4">
+                                                        <ProgressBar
+                                                            Minimum="0"
+                                                            Maximum="1"
+                                                            Value="{Binding Progress}" />
+                                                        <TextBlock Style="{StaticResource MutedText}" FontSize="12" Text="{Binding ProgressLabel}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Style="{StaticResource MutedText}" FontSize="12" Text="{Binding Range}" />
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
                             </StackPanel>
                         </Border>
-                        <Border
-                            Padding="20"
-                            CornerRadius="18"
-                            BorderBrush="#363B3C"
-                            BorderThickness="1"
-                            Background="#1C1F20">
-                            <StackPanel Spacing="12">
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Budget alerts" />
-                                <ListView
-                                    x:Name="BudgetAlertsListView"
-                                    SelectionMode="None">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" />
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-                    </StackPanel>
-                    <StackPanel x:Name="PlanningPage" Spacing="18" Visibility="Collapsed">
-                <Border
-                    
-                    Padding="20"
-                    CornerRadius="18"
-                    BorderBrush="#363B3C"
-                    BorderThickness="1"
-                    Background="#1C1F20">
-                    <StackPanel Spacing="14">
-                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Monthly budgets" />
-                        <TextBlock x:Name="BudgetUtilisationTextBlock" Style="{StaticResource MutedText}" Text="No budgets yet" />
-                        <Grid ColumnSpacing="10">
+                        <Grid
+                            x:Name="PlanningLayout"
+                            ColumnSpacing="16">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="2*" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox
-                                x:Name="BudgetCategoryTextBox"
-                                Header="Category"
-                                PlaceholderText="e.g. groceries" />
-                            <TextBox
-                                x:Name="BudgetLimitTextBox"
-                                Grid.Column="1"
-                                Header="Limit (£)"
-                                PlaceholderText="300" />
-                            <Button
-                                Grid.Column="2"
-                                Margin="0,24,0,0"
-                                Click="AddBudgetButton_Click"
-                                Content="Save Budget" />
-                            <Button
-                                Grid.Column="3"
-                                Margin="0,24,0,0"
-                                Click="DeleteBudgetButton_Click"
-                                Content="Delete Selected" />
+
+                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="160" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="Cash-flow forecast" AutomationProperties.HeadingLevel="Level2" />
+                                        <ComboBox
+                                            x:Name="ForecastHorizonComboBox"
+                                            Grid.Column="1"
+                                            SelectionChanged="ForecastHorizonComboBox_SelectionChanged" />
+                                    </Grid>
+                                    <CheckBox x:Name="IncludePlannedExpenses" Content="Include planned expenses" IsChecked="True" Click="PlannedForecast_Changed" />
+                                    <TextBlock x:Name="ForecastComparisonText" Style="{StaticResource MutedText}" />
+                                    <TextBlock x:Name="ProjectedEndBalanceTextBlock" FontWeight="SemiBold" Text="Connect Monzo in Settings to see a forecast." TextWrapping="Wrap" />
+                                    <TextBlock x:Name="CashFlowHealthTextBlock" Foreground="#A6AFAD" Text="Estimates use available Monzo transactions." TextWrapping="Wrap" />
+                                    <Canvas
+                                        x:Name="CashFlowCanvas"
+                                        Height="200" SizeChanged="CashFlowCanvas_SizeChanged">
+                                        <Polyline
+                                            x:Name="CashFlowPolyline"
+                                            Stroke="{StaticResource Accent}"
+                                            StrokeThickness="3"
+                                            StrokeLineJoin="Round"
+                                            StrokeStartLineCap="Round"
+                                            StrokeEndLineCap="Round" />
+                                    </Canvas>
+                                    <TextBlock FontSize="14" FontWeight="SemiBold" Text="Upcoming recurring payments" />
+                                    <ListView
+                                        x:Name="CashFlowEventsListView" ItemContainerStyle="{StaticResource StretchRow}"
+                                        MaxHeight="170"
+                                        SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="78" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" MinWidth="88" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Opacity="0.8" Text="{Binding Date}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Title}" />
+                                                    <TextBlock Grid.Column="2" HorizontalAlignment="Right" FontFamily="Cascadia Mono" Text="{Binding Amount}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="PlanningCommitments" Grid.Column="1" Style="{StaticResource Card}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="Recurring commitments" AutomationProperties.HeadingLevel="Level2" />
+                                    <TextBlock x:Name="MonthlyCommitmentsTextBlock" FontWeight="SemiBold" Text="Monthly commitments: —" />
+                                    <TextBlock x:Name="CashTightWeeks" Style="{StaticResource MutedText}" Text="" />
+                                    <ListView
+                                        x:Name="SubscriptionsListView" ItemContainerStyle="{StaticResource StretchRow}"
+                                        MaxHeight="360"
+                                        SelectionMode="None">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Padding="0,8"
+                                                    BorderBrush="{StaticResource CardStroke}"
+                                                    BorderThickness="0,0,0,1">
+                                                    <StackPanel Spacing="3">
+                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                        <TextBlock Opacity="0.8" Text="{Binding Details}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+                            </Border>
                         </Grid>
-
-                        <ListView
-                            x:Name="BudgetsListView"
-                            SelectionMode="Single">
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Border
-                                        Margin="0,4"
-                                        Padding="12"
-                                        CornerRadius="12"
-                                        BorderBrush="#363B3C"
-                                        BorderThickness="1">
-                                        <Grid ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="88" />
-                                                <ColumnDefinition Width="88" />
-                                                <ColumnDefinition Width="112" />
-                                                <ColumnDefinition Width="146" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" FontWeight="SemiBold" Text="{Binding Category}" />
-                                            <TextBlock Grid.Column="1" HorizontalAlignment="Right" Text="{Binding Limit}" />
-                                            <TextBlock Grid.Column="2" HorizontalAlignment="Right" Text="{Binding Spent}" />
-                                            <StackPanel Grid.Column="3" Spacing="4">
-                                                <ProgressBar
-                                                    Minimum="0"
-                                                    Maximum="1"
-                                                    Value="{Binding Progress}" />
-                                                <TextBlock
-                                                    HorizontalAlignment="Right"
-                                                    Opacity="0.8"
-                                                    Text="{Binding ProgressLabel}" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="4" HorizontalAlignment="Right" Opacity="0.75" Text="{Binding Range}" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </StackPanel>
-                </Border>
-                <Grid
-                    x:Name="PlanningLayout"
-                    ColumnSpacing="16">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border
-                        Grid.Column="0"
-                        Padding="20"
-                        CornerRadius="18"
-                        BorderBrush="#363B3C"
-                        BorderThickness="1"
-                        Background="#1C1F20">
-                        <StackPanel Spacing="12">
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="160" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Cash-flow forecast" />
-                                <ComboBox
-                                    x:Name="ForecastHorizonComboBox"
-                                    Grid.Column="1"
-                                    SelectionChanged="ForecastHorizonComboBox_SelectionChanged" />
-                            </Grid>
-                            <TextBlock x:Name="ProjectedEndBalanceTextBlock" FontWeight="SemiBold" Text="Connect Monzo in Settings to see a forecast." TextWrapping="Wrap" />
-                            <TextBlock x:Name="CashFlowHealthTextBlock" Foreground="#A6AFAD" Text="Estimates use available Monzo transactions." TextWrapping="Wrap" />
-                            <Canvas
-                                x:Name="CashFlowCanvas"
-                                Height="200" SizeChanged="CashFlowCanvas_SizeChanged">
-                                <Polyline
-                                    x:Name="CashFlowPolyline"
-                                    Stroke="#60A5FA"
-                                    StrokeThickness="3"
-                                    StrokeLineJoin="Round"
-                                    StrokeStartLineCap="Round"
-                                    StrokeEndLineCap="Round" />
-                            </Canvas>
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="Upcoming recurring payments" />
-                            <ListView
-                                x:Name="CashFlowEventsListView"
-                                MaxHeight="170"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnSpacing="10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="78" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="100" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Opacity="0.8" Text="{Binding Date}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Title}" />
-                                            <TextBlock Grid.Column="2" HorizontalAlignment="Right" FontFamily="Cascadia Mono" Text="{Binding Amount}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </StackPanel>
-                    </Border>
-
-                    <Border
-                        x:Name="PlanningCommitments" Grid.Column="1"
-                        Padding="20"
-                        CornerRadius="18"
-                        BorderBrush="#363B3C"
-                        BorderThickness="1"
-                        Background="#1C1F20">
-                        <StackPanel Spacing="12">
-                            <TextBlock FontSize="20" FontWeight="SemiBold" Text="Recurring commitments" />
-                            <TextBlock x:Name="MonthlyCommitmentsTextBlock" FontWeight="SemiBold" Text="Monthly commitments: —" />
-                            <TextBlock x:Name="CashTightWeeks" Style="{StaticResource MutedText}" Text="" />
-                            <ListView
-                                x:Name="SubscriptionsListView"
-                                MaxHeight="360"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border
-                                            Margin="0,3"
-                                            Padding="10"
-                                            CornerRadius="10"
-                                            BorderBrush="#363B3C"
-                                            BorderThickness="1">
-                                            <StackPanel Spacing="3">
-                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                <TextBlock Opacity="0.8" Text="{Binding Details}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Planned expenses" AutomationProperties.HeadingLevel="Level2" />
+                                <TextBlock x:Name="PlannedExpenseEmpty" Style="{StaticResource MutedText}" Text="Add a bill, renewal or upcoming purchase." />
+                                <StackPanel x:Name="PlannedExpenseRows" Spacing="6" />
+                                <Button Click="AddPlannedExpense_Click" Content="Add planned expense" />
+                            </StackPanel>
+                        </Border>
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Savings goals" />
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Savings goals" AutomationProperties.HeadingLevel="Level2" />
                                 <TextBlock x:Name="GoalsEmptyText" Style="{StaticResource MutedText}" Text="Link a goal to a tracked savings balance." />
                                 <StackPanel x:Name="GoalRows" Spacing="10" />
                                 <Button Click="AddGoal_Click" Content="Add goal" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                    <StackPanel x:Name="SettingsPage" Spacing="18" Visibility="Collapsed">
+                    <StackPanel x:Name="SettingsPage" Spacing="16" Visibility="Collapsed">
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="14">
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Monzo connection" />
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Monzo connection" AutomationProperties.HeadingLevel="Level2" />
                                 <TextBlock Style="{StaticResource MutedText}" Text="Connect your account to include its balance and see transactions, spending and cash flow." />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <local:ActionRow>
                                     <Button x:Name="LoginButton" Click="LoginButton_Click" Content="Connect Monzo" Style="{StaticResource AccentButtonStyle}" />
                                     <Button x:Name="RefreshButton" Click="RefreshButton_Click" Content="Refresh" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Click="BackfillHistory_Click" Content="Backfill history" />
+                                </local:ActionRow>
+                                <local:ActionRow>
                                     <Button x:Name="CredentialsButton" Click="CredentialsButton_Click" Content="API credentials" />
                                     <Button x:Name="AccessTokenButton" Click="AccessTokenButton_Click" Content="Access token" />
-                                </StackPanel>
+                                    <Button Click="ManageAccounts_Click" Content="Manage accounts" />
+                                </local:ActionRow>
                                 <StackPanel x:Name="ConnectedAccount" Visibility="Collapsed" Spacing="4">
                                     <TextBlock x:Name="AccountIdTextBlock" Style="{StaticResource MutedText}" />
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock x:Name="BalanceTextBlock" />
                                         <TextBlock x:Name="CurrencyTextBlock" Style="{StaticResource MutedText}" />
                                     </StackPanel>
+                                    <TextBlock x:Name="PotsBalanceText" Style="{StaticResource MutedText}" Visibility="Collapsed" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Finance data" />
-                                <TextBlock Style="{StaticResource MutedText}" Text="Back up balances, history, budgets, goals, rules and preferences in a password-protected file." />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Finance data" AutomationProperties.HeadingLevel="Level2" />
+                                <TextBlock Style="{StaticResource MutedText}" Text="Back up balances, transactions, budgets, goals, rules and preferences in a password-protected file." />
+                                <local:ActionRow>
                                     <Button Click="Backup_Click" Content="Create backup" />
                                     <Button Click="Restore_Click" Content="Restore backup" />
                                     <Button Click="DisconnectMonzo_Click" Content="Disconnect Monzo" />
-                                </StackPanel>
+                                </local:ActionRow>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
-            <InfoBar x:Name="WorkspaceStatus" Grid.Row="1" Margin="30,0,30,14" IsClosable="True" />
+            <InfoBar x:Name="WorkspaceStatus" Grid.Row="1" Margin="16,0,16,12" IsClosable="True" />
         </Grid>
     </Grid>
 </Window>

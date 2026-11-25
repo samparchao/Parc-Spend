@@ -33,11 +33,11 @@ public sealed partial class MainWindow
             IReadOnlyList<ManualFinanceEntry> reviewEntries = _holdings;
             if (reviewEntries.Count == 0)
             {
-                MonthlySnapshot? seed = _monthlyHistory.LastOrDefault(snapshot => snapshot.Balances.Any(balance => !balance.IsMonzo));
+                MonthlySnapshot? seed = _monthlyHistory.LastOrDefault(snapshot => snapshot.Balances.Any(CanCarryForward));
                 if (seed is not null && await ConfirmAsync("Start with historical balances?",
                     $"Carry forward the accounts from {seed.Month:MMM yyyy} into this review?", "Carry forward"))
                 {
-                    reviewEntries = seed.Balances.Where(balance => !balance.IsMonzo).Select(balance => new ManualFinanceEntry
+                    reviewEntries = seed.Balances.Where(CanCarryForward).Select(balance => new ManualFinanceEntry
                     {
                         Name = balance.Name,
                         Amount = Math.Abs(balance.Amount),
@@ -47,7 +47,7 @@ public sealed partial class MainWindow
                 }
             }
 
-            if (reviewEntries.Count == 0 && !_hasMonzoBalance)
+            if (reviewEntries.Count == 0 && !LinkedMonthlyBalances().Any())
             {
                 SetStatus("Add a tracked balance or connect Monzo before starting your review.", InfoBarSeverity.Warning);
                 return;
@@ -120,10 +120,7 @@ public sealed partial class MainWindow
             {
                 updated = [];
                 balances = [];
-                if (_hasMonzoBalance)
-                {
-                    balances.Add(MonzoMonthlyBalance());
-                }
+                balances.AddRange(LinkedMonthlyBalances());
 
                 foreach (ReviewRow row in rows)
                 {
@@ -333,15 +330,16 @@ public sealed partial class MainWindow
     private static decimal IncludedShare(decimal amount, decimal share) =>
         decimal.Round(amount * share / 100, 2, MidpointRounding.AwayFromZero);
 
+    private static bool CanCarryForward(MonthlyBalance balance) =>
+        !balance.IsMonzo && balance.Kind != "Pot"
+        && balance.AccountId?.StartsWith("csv:", StringComparison.Ordinal) != true;
+
     private static bool IsAccessible(MonthlyBalance balance) =>
         !balance.IsDebt && (balance.IsMonzo || balance.Kind is "Cash" or "Savings");
 
     private static MonthlyBalance ToMonthlyBalance(ManualFinanceEntry entry) =>
         new(entry.Name, IncludedShare(SignedAmount(entry), entry.OwnershipPercent), IsDebt(entry),
             AccountId: entry.Id, Kind: entry.Kind);
-
-    private MonthlyBalance MonzoMonthlyBalance() =>
-        new("Monzo", _currentBalance, _currentBalance < 0, IsMonzo: true, AccountId: "monzo:" + _connectedAccountId, Kind: "Cash");
 
     private sealed record ReviewRow(ManualFinanceEntry Entry, TextBox Amount, TextBox? Contribution);
 }
